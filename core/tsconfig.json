@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "../dist/core",
+    "types": ["node"]
+  },
+  "include": [
+    "server/**/*",
+    "client/**/*",
+    "shared/**/*",
+    "../app/services/gameRegistry.ts",
+    "../app/components/GameBridge.tsx"
+  ]
+}

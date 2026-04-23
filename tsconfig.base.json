@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "CommonJS",
+
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@core-client/*": ["core/client/src/*"],
+      "@core-server/*": ["core/server/src/*"],
+      "shared/*": ["core/shared/*"],
+      "games/*": ["games/*"]
+    },
+
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+
+    "moduleResolution": "node",
+    "resolveJsonModule": true
+  }
+}

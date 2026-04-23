@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "../../dist/games/gem_game",
+    "types": ["node"]
+  },
+  "include": ["server/**/*", "client/**/*", "shared/**/*"]
+}

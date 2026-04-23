@@ -1,0 +1,30 @@
+{
+  "images": [
+    "/games/loveletter/img/box.png",
+    "/games/loveletter/img/butler.png",
+    "/games/loveletter/img/clown.png",
+    "/games/loveletter/img/commoner.png",
+    "/games/loveletter/img/countess.png",
+    "/games/loveletter/img/dog.png",
+    "/games/loveletter/img/fortune_teller.png",
+    "/games/loveletter/img/general.png",
+    "/games/loveletter/img/king_fatal.png",
+    "/games/loveletter/img/knight.png",
+    "/games/loveletter/img/marquise.png",
+    "/games/loveletter/img/merchant.png",
+    "/games/loveletter/img/minister.png",
+    "/games/loveletter/img/priest.png",
+    "/games/loveletter/img/prince.png",
+    "/games/loveletter/img/princess.png",
+    "/games/loveletter/img/princess_second.png",
+    "/games/loveletter/img/princess_third.png",
+    "/games/loveletter/img/queen_mother.png",
+    "/games/loveletter/img/scholar.png",
+    "/games/loveletter/img/servant.png",
+    "/games/loveletter/img/soldier.png",
+    "/games/loveletter/img/wizard.png"
+  ],
+  "audios": [
+    "/games/loveletter/audio/card.mp3"
+  ]
+}

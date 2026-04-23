@@ -1,0 +1,226 @@
+// server/src/game/actions/buyCard.ts
+import {
+  GemGameState,
+  Player,
+  Card,
+  Color,
+  TokenColor,
+  TokenSet,
+} from '../../shared/types';
+import { ActionError } from '../../shared/types';
+import getCurrentUser from '../utils/getCurrentUser';
+
+//
+function findCard(gameState: GemGameState, player: Player, cardId: string) {
+  const levels = ['level1', 'level2', 'level3'] as const;
+
+  for (const level of levels) {
+    const card = gameState.market[level].find((c) => c.id === cardId);
+
+    if (card) {
+      return { card, source: 'market', level };
+    }
+  }
+
+  const reserved = player.reservedCards.find((c) => c.id === cardId);
+
+  if (reserved) {
+    return { card: reserved, source: 'reserved' };
+  }
+
+  return null;
+}
+// 手動支払い
+function validateManualPayment(
+  player: Player,
+  card: Card,
+  payment: TokenSet,
+): TokenSet {
+  const colors: Color[] = ['emerald', 'diamond', 'sapphire', 'onyx', 'ruby'];
+
+  let goldNeeded = 0;
+
+  for (const color of colors) {
+    const cost = card.cost[color];
+    const bonus = player.bonuses[color];
+
+    const required = Math.max(cost - bonus, 0);
+    const paid = payment[color];
+
+    // 所持チェック
+    if (paid > player.tokens[color]) {
+      throw new ActionError('INVALID_PAYMENT', 'トークンが不足しています');
+    }
+
+    // 払いすぎチェック
+    if (paid > required) {
+      throw new ActionError('INVALID_PAYMENT', '払いすぎです');
+    }
+
+    const remaining = required - paid;
+
+    if (remaining > 0) {
+      goldNeeded += remaining;
+    }
+  }
+
+  // goldチェック
+  if (payment.gold > player.tokens.gold) {
+    throw new ActionError('INVALID_PAYMENT', 'ゴールドが不足しています');
+  }
+
+  if (goldNeeded > payment.gold) {
+    throw new ActionError('INVALID_PAYMENT', '支払いが不足しています');
+  }
+
+  return payment;
+}
+
+// 自動支払い
+function calculatePayment(player: Player, card: Card) {
+  const payment: TokenSet = {
+    emerald: 0,
+    diamond: 0,
+    sapphire: 0,
+    onyx: 0,
+    ruby: 0,
+    gold: 0,
+  };
+
+  const colors: Color[] = ['emerald', 'diamond', 'sapphire', 'onyx', 'ruby'];
+
+  for (const color of colors) {
+    const cost = card.cost[color];
+    const bonus = player.bonuses[color];
+
+    let remaining = Math.max(cost - bonus, 0);
+
+    const useToken = Math.min(player.tokens[color], remaining);
+
+    payment[color] = useToken;
+
+    remaining -= useToken;
+
+    if (remaining > 0) {
+      payment.gold += remaining;
+    }
+  }
+
+  if (payment.gold > player.tokens.gold) {
+    throw new ActionError('CANNOT_BUY_CARD', 'コストが足りません');
+  }
+
+  return payment;
+}
+
+//
+function applyPayment(
+  gameState: GemGameState,
+  player: Player,
+  payment: TokenSet,
+) {
+  const colors: TokenColor[] = [
+    'emerald',
+    'diamond',
+    'sapphire',
+    'onyx',
+    'ruby',
+    'gold',
+  ] as const;
+
+  for (const color of colors) {
+    const amount = payment[color];
+
+    if (amount <= 0) continue;
+
+    player.tokens[color] -= amount;
+    gameState.tokenPool[color] += amount;
+  }
+}
+
+//
+function removeCardFromMarket(gameState: GemGameState, cardId: string) {
+  const levels = ['level1', 'level2', 'level3'] as const;
+
+  for (const level of levels) {
+    const index = gameState.market[level].findIndex((c) => c.id === cardId);
+
+    if (index !== -1) {
+      gameState.market[level].splice(index, 1);
+      return;
+    }
+  }
+}
+
+//
+function refillMarket(
+  gameState: GemGameState,
+  level: 'level1' | 'level2' | 'level3',
+) {
+  const deck = gameState.decks[level];
+
+  if (deck.length === 0) return;
+
+  const newCard = deck.shift();
+
+  if (!newCard) return;
+
+  gameState.market[level].push(newCard);
+}
+
+type Params = {
+  cardId: string;
+  payment?: TokenSet;
+};
+
+export function buyCard(gameState: GemGameState, params: Params) {
+  const { cardId } = params;
+
+  const player = getCurrentUser(gameState);
+
+  if (!player) return;
+
+  // カード取得
+  const result = findCard(gameState, player, cardId);
+
+  if (!result) {
+    throw new ActionError('CARD_NOT_FOUND', 'カードが見つかりません');
+  }
+
+  const { card, source, level } = result;
+
+  // 支払い計算
+  const payment = params.payment
+    ? validateManualPayment(player, card, params.payment)
+    : calculatePayment(player, card);
+
+  // 支払い実行
+  applyPayment(gameState, player, payment);
+
+  // カード取得
+  player.cards.push(card);
+
+  // ボーナス追加
+  player.bonuses[card.bonus]++;
+
+  // スコア追加
+  player.point += card.point;
+
+  // カード削除
+  if (source === 'market') {
+    removeCardFromMarket(gameState, cardId);
+    refillMarket(gameState, level!);
+  }
+
+  if (source === 'reserved') {
+    player.reservedCards = player.reservedCards.filter((c) => c.id !== cardId);
+  }
+}
+
+export function buyCardAndReturn(
+  gameState: GemGameState,
+  params: Params,
+): GemGameState {
+  buyCard(gameState, params);
+  return gameState;
+}
