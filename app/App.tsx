@@ -30,7 +30,7 @@ export const App = () => {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
 
       <div className="relative flex flex-col items-center justify-center gap-6 w-full h-full px-4 text-white">
-        {room.status === 'init' && (
+        {!room.isCurrentRoom && (
           <HomeScreen
             onCreateRoom={handleCreateRoom}
             onJoinRoom={handleJoinRoom}
@@ -39,7 +39,7 @@ export const App = () => {
           />
         )}
 
-        {room.status === 'waiting' && (
+        {room.isCurrentRoom && room.status === 'waiting' && (
           <WaitingScreen
             roomId={room.roomId || ''}
             players={room.players || []}
