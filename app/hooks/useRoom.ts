@@ -22,7 +22,16 @@ export function useRoom(name: string) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [socketId, setSocketId] = useState<string | null>(null);
 
-  const { room, setRoom, setGameState, setMyPlayerId } = useRoomContext();
+  const {
+    room,
+    setRoom,
+    setGameState,
+    setMyPlayerId,
+    currentRoomId,
+    setCurrentRoomId,
+  } = useRoomContext();
+
+  const isCurrentRoom = room?.id != null && currentRoomId === room.id;
 
   const hostId = room?.hostId ?? null;
   const players = room?.players ?? [];
@@ -45,6 +54,7 @@ export function useRoom(name: string) {
     sessionStorage.setItem('playerId', newPlayerId);
 
     socketClient.joinRoom(newRoomId, newPlayerId, name);
+    setCurrentRoomId(newRoomId);
   }, [name]);
 
   const onJoinRoom = useCallback(
@@ -66,6 +76,7 @@ export function useRoom(name: string) {
       setMyPlayerId(newPlayerId);
 
       socketClient.joinRoom(normalizedRoomId, newPlayerId, name);
+      setCurrentRoomId(normalizedRoomId);
     },
     [name],
   );
@@ -82,6 +93,7 @@ export function useRoom(name: string) {
     setRoomId(savedRoomId);
     setPlayerId(savedPlayerId);
     setMyPlayerId(savedPlayerId);
+    setCurrentRoomId(savedRoomId);
   }, []);
 
   const onLeaveRoom = () => {
@@ -95,6 +107,7 @@ export function useRoom(name: string) {
     setRoomId(null);
     setPlayerId(null);
     setSocketId(null);
+    setCurrentRoomId(null);
   };
 
   const onSelectGame = (gameId: GameType) => {
@@ -157,11 +170,18 @@ export function useRoom(name: string) {
       );
     });
 
+    socketClient.on('leftRoom', () => {
+      setCurrentRoomId(null);
+      setRoom(null);
+      setGameState(null);
+    });
+
     return () => {
       socketClient.off('roomUpdate');
       socketClient.off('gameStarted');
       socketClient.off('gameStateUpdate');
       socketClient.off('gameSelected');
+      socketClient.off('leftRoom');
     };
   }, []);
 
@@ -174,6 +194,7 @@ export function useRoom(name: string) {
       players: [],
       isHost: false,
       status: 'init',
+      isCurrentRoom: false,
       onCreateRoom,
       onJoinRoom,
       onLeaveRoom,
@@ -188,6 +209,7 @@ export function useRoom(name: string) {
     players,
     isHost,
     status,
+    isCurrentRoom,
     onCreateRoom,
     onJoinRoom,
     onLeaveRoom,

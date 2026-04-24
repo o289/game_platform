@@ -10,6 +10,11 @@ type RoomContextType = {
 
   myPlayerId: string;
   setMyPlayerId: React.Dispatch<React.SetStateAction<string>>;
+
+  // 🔥 追加（クライアント状態）
+
+  currentRoomId: string | null;
+  setCurrentRoomId: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 const RoomContext = createContext<RoomContextType | undefined>(undefined);
@@ -32,6 +37,7 @@ export function RoomProvider({ children }: Props) {
   const [room, setRoom] = useState<Room | null>(null);
   const [gameState, setGameState] = useState<any>(null);
   const [myPlayerId, setMyPlayerId] = useState<string>('');
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 
   const value = useMemo(
     () => ({
@@ -41,8 +47,10 @@ export function RoomProvider({ children }: Props) {
       setGameState,
       myPlayerId,
       setMyPlayerId,
+      currentRoomId,
+      setCurrentRoomId,
     }),
-    [room, gameState, myPlayerId],
+    [room, gameState, myPlayerId, currentRoomId],
   );
 
   return <RoomContext.Provider value={value}>{children}</RoomContext.Provider>;

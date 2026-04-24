@@ -3,13 +3,17 @@
 import { io, Socket } from 'socket.io-client';
 import { Action } from 'shared/types';
 
-type SocketEvents =
-  | 'gameStateUpdate'
-  | 'roomUpdate'
-  | 'gameStarted'
-  | 'roomClosed'
-  | 'action_error'
-  | 'gameSelected';
+const SOCKET_EVENTS = [
+  'gameStateUpdate',
+  'roomUpdate',
+  'gameStarted',
+  'roomClosed',
+  'action_error',
+  'gameSelected',
+  'leftRoom',
+] as const;
+
+type SocketEvents = (typeof SOCKET_EVENTS)[number];
 
 type AuthPayload = {
   roomId?: string;
@@ -170,14 +174,7 @@ class SocketClient {
   // ------------------------
 
   private registerCoreEvents() {
-    const events: SocketEvents[] = [
-      'gameStateUpdate',
-      'roomUpdate',
-      'gameStarted',
-      'roomClosed',
-      'action_error',
-      'gameSelected',
-    ];
+    const events = SOCKET_EVENTS;
 
     events.forEach((event) => {
       this.socket.on(event, (data: unknown) => {
