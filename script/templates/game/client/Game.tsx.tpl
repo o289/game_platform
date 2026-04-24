@@ -12,7 +12,7 @@ import WaitingScreen from "./layouts/WaitingScreen";
  */
 
 export default function __PASCAL_NAME__() {
-  const { state, sendAction, isMyTurn } = useGame();
+  const { state, sendAction, isMyTurn, startGame, isHost } = useGame();
 
   // デバッグ
   console.log("[Game] rendered", {
@@ -24,11 +24,8 @@ export default function __PASCAL_NAME__() {
   if (!state) {
     return (
       <WaitingScreen
-        isHost={true}
-        startGame={(config) => {
-          console.log("startGame called", config);
-          // TODO: socket or API呼び出しに置き換える
-        }}
+        isHost={isHost}
+        startGame={startGame}
       />
     );
   }
