@@ -36,6 +36,28 @@ export function createSocketServer(httpServer: any) {
     }
   };
 
+  // ⭐ 共通: gameState送信（public/private対応）
+  const emitGameState = (
+    room: any,
+    state: any,
+    eventName: string,
+    engine: any,
+  ) => {
+    const toPublic = engine.toPublicState;
+
+    if (toPublic) {
+      room.players.forEach((p: any) => {
+        const socketId = p.socketId;
+        if (!socketId) return;
+
+        const outputState = toPublic(state, p.id);
+        io.to(socketId).emit(eventName, outputState);
+      });
+    } else {
+      io.to(room.id).emit(eventName, state);
+    }
+  };
+
   io.on('connection', (socket) => {
     // 🔥 接続時に復帰処理（authベース）
     const { roomId: authRoomId, playerId: authPlayerId } =
@@ -58,9 +80,12 @@ export function createSocketServer(httpServer: any) {
             emitRoomUpdate(authRoomId);
           } else {
             const state = room.gameState;
-
             if (state) {
-              socket.emit('gameStateUpdate', state);
+              const engine = getGameDefinition(room.gameType!).engine;
+              const outputState = engine.toPublicState
+                ? engine.toPublicState(state, authPlayerId)
+                : state;
+              socket.emit('gameStateUpdate', outputState);
             }
           }
 
@@ -159,7 +184,7 @@ export function createSocketServer(httpServer: any) {
 
         room.gameState = newState;
 
-        io.to(roomId).emit('gameStateUpdate', newState);
+        emitGameState(room, newState, 'gameStateUpdate', engine);
       } catch (err: any) {
         // ゲーム固有エラーをそのままクライアントに返す
         socket.emit('action_error', {
@@ -213,8 +238,10 @@ export function createSocketServer(httpServer: any) {
 
         emitRoomUpdate(roomId);
 
-        io.to(roomId).emit('gameStarted', initialState);
-        io.to(roomId).emit('gameStateUpdate', initialState);
+        const engine = getGameDefinition(gameType).engine;
+
+        emitGameState(room, initialState, 'gameStarted', engine);
+        emitGameState(room, initialState, 'gameStateUpdate', engine);
       } catch (err) {
         console.error('startGame failed', err);
       }
@@ -231,8 +258,10 @@ export function createSocketServer(httpServer: any) {
 
         emitRoomUpdate(roomId);
 
-        io.to(roomId).emit('gameStarted', initialState);
-        io.to(roomId).emit('gameStateUpdate', initialState);
+        const engine = getGameDefinition(room.gameType!).engine;
+
+        emitGameState(room, initialState, 'gameStarted', engine);
+        emitGameState(room, initialState, 'gameStateUpdate', engine);
       } catch (err) {
         console.error('rematch failed', err);
       }
