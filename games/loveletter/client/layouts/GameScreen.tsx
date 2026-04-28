@@ -172,9 +172,9 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
 
       {isMyTurn && serverPhase === 'DRAW' && !state.pendingEffect && (
         <div className="justify-center">
-          {/* <div className="text-center text-sm text-gray-300">
+          <div className="text-center text-sm text-gray-300">
             残り山札: {state.deckCount}
-          </div> */}
+          </div>
 
           <button
             className="px-6 py-2 bg-blue-500 rounded hover:bg-blue-600"

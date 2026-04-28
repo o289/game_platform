@@ -64,6 +64,6 @@ export const LoveletterEngine: GameEngine<State, Action, Config> = {
   },
 
   toPublicState(state, viewerId) {
-    getPublicState(state, viewerId);
+    return getPublicState(state, viewerId);
   },
 };
