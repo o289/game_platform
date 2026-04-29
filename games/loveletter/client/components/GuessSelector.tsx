@@ -4,7 +4,7 @@ import { useGameConfig } from '../context/GameConfigContext';
 
 type Props = {
   selectedGuess?: CardType;
-  onSelect: (card: CardType) => void;
+  requestGuess: (card: CardType) => void;
   disabled?: boolean;
 };
 
@@ -13,7 +13,7 @@ const EXCLUDED: CardType[] = ['SOLDIER'];
 
 export const GuessSelector: React.FC<Props> = ({
   selectedGuess,
-  onSelect,
+  requestGuess,
   disabled = false,
 }) => {
   const { config } = useGameConfig();
@@ -30,7 +30,7 @@ export const GuessSelector: React.FC<Props> = ({
             key={card.type}
             onClick={() => {
               if (disabled) return;
-              onSelect(card.type);
+              requestGuess(card.type);
             }}
             className={`
               px-3 py-1 h-10 rounded border text-sm transition-all inline-flex items-center justify-center min-w-[100px]

@@ -42,16 +42,44 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
     uiPhase,
     myPlayer,
     selectedCard,
-    setSelectedCard,
     selectedTargetId,
-    setSelectedTargetId,
     guess,
-    setGuess,
+    confirm,
+    requestSelectCard,
+    requestSelectTarget,
+    requestGuess,
+    confirmAction,
+    cancelConfirm,
     canExecute,
+    resetAction,
     error,
   } = useGame();
 
   const [announcement, setAnnouncement] = useState<string | null>(null);
+  const getConfirmContent = () => {
+    if (!confirm) return null;
+
+    switch (confirm.type) {
+      case 'CARD':
+        return {
+          message: 'このカードを使用しますか？',
+          content: <CardData card={confirm.card} />,
+        };
+
+      case 'TARGET':
+        return {
+          message: 'このプレイヤーを対象にしますか？',
+          content: null,
+        };
+
+      case 'GUESS':
+        return {
+          message: `相手が持っているのは ${confirm.guess} ですか？`,
+          content: null,
+        };
+    }
+  };
+  const confirmContent = getConfirmContent();
 
   const [discardPile, setDiscardPile] = useState<boolean>(false);
   const [playerStatus, setPlayerStatus] = useState<boolean>(false);
@@ -148,9 +176,35 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
         </div>
       )}
 
+      {confirm && confirmContent && (
+        <Modal isOpen={true}>
+          <div className="flex flex-col items-center gap-4">
+            <div>{confirmContent.message}</div>
+
+            {confirmContent.content}
+
+            <div className="flex gap-4">
+              <button
+                className="px-3 py-1 rounded bg-red-700"
+                onClick={confirmAction}
+              >
+                決定
+              </button>
+
+              <button
+                className="px-3 py-1 rounded bg-gray-500"
+                onClick={cancelConfirm}
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* 手札 */}
       {!isMyTurn ||
-        (uiPhase === 'SELECT' && (
+        (uiPhase === 'SELECT' && !confirm && (
           <>
             {state.revealedCards.length > 0 && (
               <div className="flex gap-2 justify-center mb-4">
@@ -164,7 +218,7 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
               hand={myPlayer?.hand ?? null}
               drawnCard={myPlayer?.drawnCard ?? null}
               selectedCard={selectedCard}
-              onSelect={setSelectedCard}
+              requestSelectCard={requestSelectCard}
               disabled={uiPhase !== 'SELECT'}
             />
           </>
@@ -188,32 +242,33 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
         </div>
       )}
 
+      {/* ゲームフロー通りの処理順にしたいため移動 */}
       {/* 対象選択 */}
-      {uiPhase === 'TARGET' && selectedCard && (
+      {uiPhase === 'TARGET' && selectedCard && !confirm && (
         <TargetSelector
           players={state.players}
           currentPlayerId={state.currentPlayer}
           selectedTargetId={selectedTargetId}
-          onSelect={setSelectedTargetId}
+          requestSelectTarget={requestSelectTarget}
           disabled={!isMyTurn}
           allowSelf={selectedCard.type === 'WIZARD'}
         />
       )}
 
       {/* 推測（兵士のみ） */}
-      {uiPhase === 'GUESS' && selectedCard?.type === 'SOLDIER' && (
+      {uiPhase === 'GUESS' && selectedCard?.type === 'SOLDIER' && !confirm && (
         <GuessSelector
           selectedGuess={guess}
-          onSelect={setGuess}
+          requestGuess={requestGuess}
           disabled={!isMyTurn}
         />
       )}
 
+      {/* 実行ボタン */}
       {canExecute && isMyTurn && (
         <div className="text-center text-green-400">実行できます</div>
       )}
 
-      {/* 実行ボタン */}
       {canExecute && (
         <div className="flex justify-center">
           <button
@@ -230,9 +285,7 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
               });
 
               // リセット
-              setSelectedCard(undefined);
-              setSelectedTargetId(undefined);
-              setGuess(undefined);
+              resetAction();
             }}
           >
             カードを使用
