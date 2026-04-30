@@ -1,4 +1,22 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+/**
+ * GameContext Template
+ *
+ * 役割:
+ * - GameState を提供
+ * - Action送信関数を提供
+ * - UIからゲームロジックへの入口
+ * - providerにはchildren以外のpropsを入れない
+ *
+ * ※ socketや型は各プロジェクトに合わせて差し替えてください
+ */
+
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useCallback,
+} from 'react';
 import {
   PublicLoveletterState,
   PublicPlayerState,
@@ -19,17 +37,10 @@ type UiPhase =
   | 'READY'
   | 'WAIT_EFFECT';
 
-/**
- * GameContext Template
- *
- * 役割:
- * - GameState を提供
- * - Action送信関数を提供
- * - UIからゲームロジックへの入口
- * - providerにはchildren以外のpropsを入れない
- *
- * ※ socketや型は各プロジェクトに合わせて差し替えてください
- */
+type confirmType =
+  | { type: 'CARD'; card: Card }
+  | { type: 'TARGET'; targetId: string }
+  | { type: 'GUESS'; guess: CardType };
 
 type GameContextValue = {
   state: PublicLoveletterState | null;
@@ -46,6 +57,13 @@ type GameContextValue = {
   serverPhase: Phase;
   uiPhase: UiPhase;
 
+  confirm: confirmType | null;
+  requestSelectCard: (card: Card) => void;
+  requestSelectTarget: (targetId: string) => void;
+  requestGuess: (guess: CardType) => void;
+  confirmAction: () => void;
+  cancelConfirm: () => void;
+
   // 選択状態
   selectedCard?: Card;
   selectedTargetId?: string;
@@ -55,9 +73,7 @@ type GameContextValue = {
   canPlayCard: (cardType: CardType) => boolean;
   canExecute: boolean;
 
-  setSelectedCard: (card?: Card) => void;
-  setSelectedTargetId: (id?: string) => void;
-  setGuess: (card?: CardType) => void;
+  resetAction: () => void;
 
   error: string | null;
 };
@@ -92,6 +108,8 @@ export const GameProvider = ({ children }: Props) => {
     string | undefined
   >();
   const [guess, setGuess] = useState<CardType | undefined>();
+
+  const [confirm, setConfirm] = useState<confirmType | null>(null);
 
   const state = gameState as PublicLoveletterState | null;
 
@@ -180,6 +198,47 @@ export const GameProvider = ({ children }: Props) => {
     return true;
   };
 
+  const requestSelectCard = useCallback((card: Card) => {
+    setConfirm({ type: 'CARD', card });
+  }, []);
+
+  const requestSelectTarget = useCallback((targetId: string) => {
+    setConfirm({ type: 'TARGET', targetId });
+  }, []);
+
+  const requestGuess = useCallback((guess: CardType) => {
+    setConfirm({ type: 'GUESS', guess });
+  }, []);
+
+  const confirmAction = useCallback(() => {
+    if (!confirm) return;
+
+    switch (confirm.type) {
+      case 'CARD':
+        setSelectedCard(confirm.card);
+        break;
+      case 'TARGET':
+        setSelectedTargetId(confirm.targetId);
+        break;
+      case 'GUESS':
+        setGuess(confirm.guess);
+        break;
+    }
+
+    setConfirm(null);
+  }, [confirm]);
+
+  const cancelConfirm = useCallback(() => {
+    setConfirm(null);
+  }, []);
+
+  const resetAction = useCallback(() => {
+    setConfirm(null);
+    setSelectedCard(undefined);
+    setSelectedTargetId(undefined);
+    setGuess(undefined);
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -189,6 +248,12 @@ export const GameProvider = ({ children }: Props) => {
       myPlayer,
       serverPhase,
       uiPhase,
+      confirm,
+      requestSelectCard,
+      requestSelectTarget,
+      requestGuess,
+      confirmAction,
+      cancelConfirm,
       startGame,
       resetGame,
       selectedCard,
@@ -196,9 +261,7 @@ export const GameProvider = ({ children }: Props) => {
       guess,
       canPlayCard,
       canExecute,
-      setSelectedCard,
-      setSelectedTargetId,
-      setGuess,
+      resetAction,
       error,
     }),
     [
@@ -208,6 +271,12 @@ export const GameProvider = ({ children }: Props) => {
       myPlayer,
       serverPhase,
       uiPhase,
+      confirm,
+      requestSelectCard,
+      requestSelectTarget,
+      requestGuess,
+      confirmAction,
+      cancelConfirm,
       selectedCard,
       selectedTargetId,
       guess,

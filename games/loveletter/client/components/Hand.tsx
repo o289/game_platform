@@ -6,7 +6,7 @@ type Props = {
   hand: Card | null;
   drawnCard: Card | null;
   selectedCard?: Card;
-  onSelect: (card: Card) => void;
+  requestSelectCard: (card: Card) => void;
   disabled?: boolean;
 };
 
@@ -14,7 +14,7 @@ export const Hand: React.FC<Props> = ({
   hand,
   drawnCard,
   selectedCard,
-  onSelect,
+  requestSelectCard,
   disabled = false,
 }) => {
   const cards: Card[] = [];
@@ -36,7 +36,7 @@ export const Hand: React.FC<Props> = ({
             key={`${card.type}-${index}`}
             onClick={() => {
               if (disabled) return;
-              onSelect(card);
+              requestSelectCard(card);
             }}
             className={`
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}

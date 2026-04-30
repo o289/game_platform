@@ -5,7 +5,7 @@ type Props = {
   players: PublicPlayerState[];
   currentPlayerId: string;
   selectedTargetId?: string;
-  onSelect: (playerId: string) => void;
+  requestSelectTarget: (playerId: string) => void;
   disabled?: boolean;
   allowSelf?: boolean; // ⭐追加
 };
@@ -14,7 +14,7 @@ export const TargetSelector: React.FC<Props> = ({
   players,
   currentPlayerId,
   selectedTargetId,
-  onSelect,
+  requestSelectTarget,
   disabled = false,
   allowSelf = false,
 }) => {
@@ -45,7 +45,7 @@ export const TargetSelector: React.FC<Props> = ({
             key={player.id}
             onClick={() => {
               if (disabled) return;
-              onSelect(player.id);
+              requestSelectTarget(player.id);
             }}
             className={`
               relative px-4 py-2 rounded-lg border-2 text-center transition-all min-w-[140px]

@@ -13,7 +13,7 @@
 export type GameAction =
   | {
       type: "INCREMENT";
-      payload: {};
+      payload: object;
     };
 
 /**
