@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "../../dist/games/flip7",
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "server/**/*",
+    "client/**/*",
+    "shared/**/*"
+  ]
+}

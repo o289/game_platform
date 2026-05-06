@@ -6,6 +6,11 @@ export type Game = {
 
 export const GAMES = [
   {
+    id: 'flip7',
+    name: 'Flip7',
+    image: '/games/flip7/img/box.png',
+  },
+  {
     id: 'loveletter',
     name: 'ラブレター',
     image: '/games/loveletter/img/box.png',

@@ -1,0 +1,10 @@
+{
+  "images": [
+    "/games/flip7/img/box.png"
+  ],
+  "audios": [
+    "/games/flip7/audio/achieve.mp3",
+    "/games/flip7/audio/bust.mp3",
+    "/games/flip7/audio/card.mp3"
+  ]
+}
