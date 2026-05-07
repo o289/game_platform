@@ -1,5 +1,5 @@
-import { createContext, useContext, ReactNode, useMemo } from "react";
-import { useCoreGame } from "@core-client/context";
+import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { useCoreGame } from '@core-client/context';
 import { Flip7State, Player, GameAction } from '../../shared/types';
 
 type GameContextValue = {
@@ -8,8 +8,9 @@ type GameContextValue = {
   isHost: boolean;
 
   myPlayer?: Player;
-  
+
   startGame: (config: any) => void;
+  resetGame: () => void;
   sendAction: (action: GameAction) => void;
   error: string | null;
 };
@@ -23,7 +24,7 @@ type Props = {
 export const useGame = () => {
   const ctx = useContext(GameContext);
   if (!ctx) {
-    throw new Error("useGame must be used within GameProvider");
+    throw new Error('useGame must be used within GameProvider');
   }
   return ctx;
 };
@@ -35,8 +36,9 @@ export const GameProvider = ({ children }: Props) => {
     isMyTurn,
     isHost,
     startGame,
+    resetGame,
     sendAction,
-    error
+    error,
   } = useCoreGame<Flip7State, GameAction>();
   const state = gameState as Flip7State | null;
 
@@ -53,8 +55,9 @@ export const GameProvider = ({ children }: Props) => {
         isMyTurn,
         isHost,
         startGame,
+        resetGame,
         sendAction,
-        error
+        error,
       }}
     >
       {children}

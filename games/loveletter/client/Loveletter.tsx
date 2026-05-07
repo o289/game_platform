@@ -12,11 +12,18 @@ import WaitingScreen from './layouts/WaitingScreen';
  */
 
 export default function Loveletter() {
-  const { state, sendAction, isMyTurn, startGame, isHost } = useGame();
+  const { state, sendAction, isMyTurn, startGame, resetGame, isHost } =
+    useGame();
 
   // まだゲームが開始されていない
   if (!state) {
-    return <WaitingScreen isHost={isHost} startGame={startGame} />;
+    return (
+      <WaitingScreen
+        isHost={isHost}
+        startGame={startGame}
+        resetGame={resetGame}
+      />
+    );
   }
 
   // ゲームプレイ中

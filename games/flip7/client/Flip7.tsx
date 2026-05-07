@@ -1,6 +1,6 @@
-import { useGame } from "./context/GameContext";
-import GameScreen from "./layouts/GameScreen";
-import WaitingScreen from "./layouts/WaitingScreen";
+import { useGame } from './context/GameContext';
+import GameScreen from './layouts/GameScreen';
+import WaitingScreen from './layouts/WaitingScreen';
 
 /**
  * Game Entry Template
@@ -12,13 +12,8 @@ import WaitingScreen from "./layouts/WaitingScreen";
  */
 
 export default function Flip7() {
-  const { state, sendAction, isMyTurn, startGame, isHost } = useGame();
-
-  // デバッグ
-  console.log("[Game] rendered", {
-    state,
-    isMyTurn,
-  });
+  const { state, sendAction, isMyTurn, startGame, resetGame, isHost } =
+    useGame();
 
   // まだゲームが開始されていない
   if (!state) {
@@ -26,16 +21,13 @@ export default function Flip7() {
       <WaitingScreen
         isHost={isHost}
         startGame={startGame}
+        resetGame={resetGame}
       />
     );
   }
 
   // ゲームプレイ中
   return (
-    <GameScreen
-      state={state}
-      sendAction={sendAction}
-      isMyTurn={isMyTurn}
-    />
+    <GameScreen state={state} sendAction={sendAction} isMyTurn={isMyTurn} />
   );
 }
