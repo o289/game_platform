@@ -1,6 +1,7 @@
 // server/src/socket/socketServer.ts
 import { Server } from 'socket.io';
 import { roomManager } from '../room/RoomManager';
+import { connectionManager } from '../connection/ConnectionManager';
 import { SystemError } from 'shared/types';
 import { getGameDefinition } from '@core-server/gameRegistry';
 
@@ -10,9 +11,6 @@ export function createSocketServer(httpServer: any) {
       origin: '*',
     },
   });
-
-  // 🔥 DEBUG: global socket tracking (playerId -> Set<socketId>)
-  const playerSockets = new Map<string, Set<string>>();
 
   // 🔥 共通: roomUpdate emit helper
   const emitRoomUpdate = (roomId: string) => {
@@ -97,11 +95,7 @@ export function createSocketServer(httpServer: any) {
         socket.data.playerId = authPlayerId;
         socket.data.roomId = authRoomId;
 
-        // 🔥 DEBUG: register socket for player (reconnect path)
-        if (!playerSockets.has(authPlayerId)) {
-          playerSockets.set(authPlayerId, new Set());
-        }
-        playerSockets.get(authPlayerId)!.add(socket.id);
+        connectionManager.connect(authPlayerId, socket);
 
         // 🔥 reconnect時：削除タイマーキャンセル
         roomManager.clearDisconnectTimeout?.(authRoomId, authPlayerId);
@@ -134,17 +128,54 @@ export function createSocketServer(httpServer: any) {
       socket.data.playerId = playerId;
       socket.data.roomId = roomId;
 
-      // 🔥 DEBUG: register socket for player (join path)
-      if (!playerSockets.has(playerId)) {
-        playerSockets.set(playerId, new Set());
-      }
-      playerSockets.get(playerId)!.add(socket.id);
+      connectionManager.connect(playerId, socket);
 
       socket.join(roomId);
 
       room.status = 'waiting';
 
       // 🔥 join時に全員へroom状態を通知
+      emitRoomUpdate(roomId);
+    });
+
+    // ルーム退出（能動退出）
+    socket.on('leaveRoom', () => {
+      const playerId = socket.data.playerId;
+      const roomId = socket.data.roomId;
+
+      if (!roomId || !playerId) return;
+
+      const room = roomManager.getRoom(roomId);
+      if (!room) return;
+
+      // reconnect猶予タイマーを削除
+      roomManager.clearDisconnectTimeout?.(roomId, playerId);
+
+      // socket接続解除
+      connectionManager.disconnect(playerId, socket);
+
+      // roomからプレイヤー削除
+      roomManager.leaveRoom(roomId, playerId);
+
+      // socket room離脱
+      socket.leave(roomId);
+
+      const updatedRoom = roomManager.getRoom(roomId);
+
+      // 誰もいなくなったらroom削除
+      if (!updatedRoom || updatedRoom.players.length === 0) {
+        roomManager.deleteRoom(roomId);
+        io.to(roomId).emit('roomClosed');
+        return;
+      }
+
+      // host退出ならroom削除
+      if (updatedRoom.hostId === playerId) {
+        roomManager.deleteRoom(roomId);
+        io.to(roomId).emit('roomClosed');
+        return;
+      }
+
       emitRoomUpdate(roomId);
     });
 
@@ -315,12 +346,8 @@ export function createSocketServer(httpServer: any) {
     socket.on('disconnect', () => {
       const playerId = socket.data.playerId;
 
-      // 🔥 DEBUG: unregister socket from global map
-      if (playerId && playerSockets.has(playerId)) {
-        playerSockets.get(playerId)!.delete(socket.id);
-        if (playerSockets.get(playerId)!.size === 0) {
-          playerSockets.delete(playerId);
-        }
+      if (playerId) {
+        connectionManager.disconnect(playerId, socket);
       }
 
       const roomId = socket.data.roomId;

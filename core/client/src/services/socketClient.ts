@@ -77,8 +77,8 @@ class SocketClient {
     });
   }
 
-  leaveRoom(roomId: string) {
-    this.socket.emit('leaveRoom', { roomId });
+  leaveRoom() {
+    this.socket.emit('leaveRoom');
   }
 
   // ------------------------

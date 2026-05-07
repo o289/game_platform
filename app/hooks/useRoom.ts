@@ -97,8 +97,8 @@ export function useRoom(name: string) {
   }, []);
 
   const onLeaveRoom = () => {
-    if (!roomId) return;
-    socketClient.leaveRoom(roomId);
+    if (!roomId || !playerId) return;
+    socketClient.leaveRoom();
 
     sessionStorage.removeItem('roomId');
     sessionStorage.removeItem('playerId');
