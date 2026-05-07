@@ -10,6 +10,8 @@ type GameContextValue = {
   myPlayer?: Player;
   
   startGame: (config: any) => void;
+  resetGame: () => void;
+
   sendAction: (action: GameAction) => void;
   error: string | null;
 };
@@ -35,6 +37,7 @@ export const GameProvider = ({ children }: Props) => {
     isMyTurn,
     isHost,
     startGame,
+    resetGame,
     sendAction,
     error
   } = useCoreGame<__PASCAL_NAME__State, GameAction>();
@@ -53,6 +56,7 @@ export const GameProvider = ({ children }: Props) => {
         isMyTurn,
         isHost,
         startGame,
+        resetGame,
         sendAction,
         error
       }}
