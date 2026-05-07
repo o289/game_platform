@@ -11,7 +11,7 @@ import WaitingScreen from './layouts/WaitingScreen';
  * - Contextから状態を取得
  */
 
-export default function Loveletter() {
+export default function Flip7() {
   const { state, sendAction, isMyTurn, startGame, resetGame, isHost } =
     useGame();
 

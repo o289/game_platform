@@ -25,6 +25,7 @@ type GameContextType = {
 
   // ⭐ 追加
   startGame: (config: any) => void;
+  resetGame: () => void;
 
   // トークン
   selectedTokens: TokenColor[];
@@ -52,6 +53,7 @@ export const GemGameProvider = ({ children }: Props) => {
     gameState,
     myPlayerId,
     startGame,
+    resetGame,
     sendAction,
     isMyTurn,
     isHost,
@@ -107,6 +109,7 @@ export const GemGameProvider = ({ children }: Props) => {
         state,
         sendAction,
         startGame,
+        resetGame,
         myPlayer,
         isMyTurn,
         isHost,

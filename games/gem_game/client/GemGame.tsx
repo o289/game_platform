@@ -3,10 +3,17 @@ import GameScreen from './layouts/GameScreen';
 import WaitingScreen from './layouts/WaitingScreen';
 
 export default function GemGame() {
-  const { state, sendAction, isMyTurn, isHost, startGame } = useGameContext();
+  const { state, sendAction, isMyTurn, isHost, startGame, resetGame } =
+    useGameContext();
 
   if (!state) {
-    return <WaitingScreen isHost={isHost} startGame={startGame} />;
+    return (
+      <WaitingScreen
+        isHost={isHost}
+        startGame={startGame}
+        resetGame={resetGame}
+      />
+    );
   }
 
   return (
