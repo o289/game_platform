@@ -22,7 +22,7 @@ import { playSound } from '../utils/sound';
 type Props = {
   state: Flip7State;
   sendAction: (action: any) => void;
-  isMyTurn?: boolean;
+  isMyTurn: boolean;
 };
 
 export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
@@ -112,7 +112,7 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
             }}
             className="flex-1 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 active:scale-95 transition font-bold"
           >
-            カードを引く
+            ワンモア!!
           </button>
 
           {/* スタンド */}
@@ -120,7 +120,7 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
             onClick={() => sendAction({ type: 'STAND' })}
             className="flex-1 py-3 rounded-xl bg-yellow-400 text-black hover:bg-yellow-500 active:scale-95 transition font-bold"
           >
-            ゲームから降りる
+            ストップ!!
           </button>
         </div>
       )}
@@ -136,6 +136,7 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
         <Events
           events={state.events}
           players={state.players}
+          isMyTurn={isMyTurn}
           sendAction={sendAction}
         />
       )}

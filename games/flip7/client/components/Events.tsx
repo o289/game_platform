@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CardRenderer } from './cards/CardRenderer';
 import { Modal } from '../components/Modal';
 import { Player, GameEvent } from 'games/flip7/shared/types';
@@ -8,25 +8,30 @@ import { playSound } from '../utils/sound';
 type Props = {
   events: GameEvent[];
   players: Player[];
+  isMyTurn: boolean;
   sendAction: (action: { type: string }) => void;
 };
 
-export function Events({ events, players, sendAction }: Props) {
+export function Events({ events, players, isMyTurn, sendAction }: Props) {
+  const isSendingRef = useRef(false);
+  const [isHidden, setIsHidden] = useState(false);
   const currentEvent = events[0];
 
   function consumeEvent() {
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
+    setIsHidden(true);
     sendAction({ type: 'CONSUME_EVENT' });
+
+    // 2秒後に再表示（ただしイベントが変われば即表示される）
+    setTimeout(() => {
+      isSendingRef.current = false;
+      setIsHidden(false);
+    }, 1500);
   }
 
-  // 1秒後に自動で次へ
   useEffect(() => {
-    if (!currentEvent) return;
-
-    const timer = setTimeout(() => {
-      consumeEvent();
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    isSendingRef.current = false;
   }, [currentEvent]);
 
   if (!currentEvent) return null;
@@ -76,6 +81,17 @@ export function Events({ events, players, sendAction }: Props) {
         {currentEvent.type === 'draw' && (
           <div className="mt-4 flex justify-center">
             <CardRenderer card={currentEvent.card} />
+          </div>
+        )}
+
+        {!isHidden && isMyTurn && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={consumeEvent}
+              className="px-6 py-2 rounded-lg bg-blue-500 text-white font-bold hover:bg-blue-600 active:scale-95 transition"
+            >
+              次へ
+            </button>
           </div>
         )}
       </div>
