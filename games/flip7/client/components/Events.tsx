@@ -49,11 +49,9 @@ export function Events({ events, players, isMyTurn, sendAction }: Props) {
         return `${getPlayerName(event.playerId)} はこのラウンドを降り、得点を確定した`;
 
       case 'bust':
-        playSound('bust');
         return `${getPlayerName(event.playerId)} はバーストした`;
 
       case 'flip7':
-        playSound('achieve');
         return `${getPlayerName(event.playerId)} が Flip7を達成!`;
 
       case 'freeze':
@@ -72,6 +70,18 @@ export function Events({ events, players, isMyTurn, sendAction }: Props) {
         return '';
     }
   };
+
+  useEffect(() => {
+    if (!currentEvent) return;
+
+    if (currentEvent.type === 'bust') {
+      playSound('bust');
+    }
+
+    if (currentEvent.type === 'flip7') {
+      playSound('achieve');
+    }
+  }, [currentEvent]);
 
   return (
     <Modal isOpen={true}>
