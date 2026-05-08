@@ -45,11 +45,9 @@ export function createSocketServer(httpServer: any) {
 
     if (toPublic) {
       room.players.forEach((p: any) => {
-        const socketId = p.socketId;
-        if (!socketId) return;
-
         const outputState = toPublic(state, p.id);
-        io.to(socketId).emit(eventName, outputState);
+
+        connectionManager.emitToPlayer(p.id, eventName, outputState);
       });
     } else {
       io.to(room.id).emit(eventName, state);
