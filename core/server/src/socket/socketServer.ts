@@ -2,7 +2,7 @@
 import { Server } from 'socket.io';
 import { roomManager } from '../room/RoomManager';
 import { connectionManager } from '../connection/ConnectionManager';
-import { SystemError } from 'shared/types';
+import { SystemError, Player, Room } from 'shared/types';
 import { getGameDefinition } from '@core-server/gameRegistry';
 
 export function createSocketServer(httpServer: any) {
@@ -36,7 +36,7 @@ export function createSocketServer(httpServer: any) {
 
   // ⭐ 共通: gameState送信（public/private対応）
   const emitGameState = (
-    room: any,
+    room: Room,
     state: any,
     eventName: string,
     engine: any,
@@ -345,6 +345,10 @@ export function createSocketServer(httpServer: any) {
         room.actionLogs = [];
         room.status = 'waiting';
 
+        room.players.forEach((p: Player) => {
+          p.isAssetReady = false;
+        });
+
         // 🔥 これが超重要
         io.to(roomId).emit('gameStateUpdate', null);
 
@@ -352,6 +356,25 @@ export function createSocketServer(httpServer: any) {
       } catch (err) {
         console.error('resetGame failed', err);
       }
+    });
+
+    // アセットロードの状態通知
+    socket.on('assetLoaded', () => {
+      const playerId = socket.data.playerId;
+      const roomId = socket.data.roomId;
+
+      if (!playerId || !roomId) return;
+
+      const room = roomManager.getRoom(roomId);
+      if (!room) return;
+
+      const player = room.players.find((p: Player) => p.id === playerId);
+
+      if (!player) return;
+
+      player.isAssetReady = true;
+
+      emitRoomUpdate(roomId);
     });
 
     // 一時切断

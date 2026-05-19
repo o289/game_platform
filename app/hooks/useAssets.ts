@@ -1,3 +1,4 @@
+import { socketClient } from '@core-client/services/socketClient';
 import { useEffect, useState } from 'react';
 
 type ProgressCallback = (loaded: number, total: number) => void;
@@ -89,6 +90,8 @@ export const useAssets = (gameName: string) => {
         preloadImages(images, (c) => updateProgress(c)),
         preloadAudios(audios, (c) => updateProgress(c)),
       ]);
+
+      socketClient.assetLoaded();
 
       setProgress(100);
       setLoaded(true);

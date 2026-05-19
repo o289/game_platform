@@ -135,6 +135,15 @@ class SocketClient {
   }
 
   // ------------------------
+  // Assets
+  // ------------------------
+  assetLoaded() {
+    this.ensureConnected(() => {
+      this.socket.emit('assetLoaded');
+    });
+  }
+
+  // ------------------------
   // Event System（汎用）
   // ------------------------
 
