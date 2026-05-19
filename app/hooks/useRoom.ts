@@ -20,7 +20,6 @@ function generateRoomId(length = 6) {
 export function useRoom(name: string) {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [socketId, setSocketId] = useState<string | null>(null);
 
   const {
     room,
@@ -82,6 +81,7 @@ export function useRoom(name: string) {
   );
 
   useEffect(() => {
+    console.log('復帰effect発火');
     const savedRoomId = sessionStorage.getItem('roomId');
     const savedPlayerId = sessionStorage.getItem('playerId');
     const savedName = sessionStorage.getItem('name');
@@ -97,8 +97,8 @@ export function useRoom(name: string) {
   }, []);
 
   const onLeaveRoom = () => {
-    if (!roomId) return;
-    socketClient.leaveRoom(roomId);
+    if (!roomId || !playerId) return;
+    socketClient.leaveRoom();
 
     sessionStorage.removeItem('roomId');
     sessionStorage.removeItem('playerId');
@@ -106,7 +106,6 @@ export function useRoom(name: string) {
 
     setRoomId(null);
     setPlayerId(null);
-    setSocketId(null);
     setCurrentRoomId(null);
   };
 
@@ -189,7 +188,6 @@ export function useRoom(name: string) {
     return {
       roomId: null,
       playerId: null,
-      socketId: null,
       hostId: null,
       players: [],
       isHost: false,
@@ -204,7 +202,6 @@ export function useRoom(name: string) {
   return {
     roomId,
     playerId,
-    socketId,
     hostId,
     players,
     isHost,

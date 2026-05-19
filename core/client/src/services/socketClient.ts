@@ -77,8 +77,8 @@ class SocketClient {
     });
   }
 
-  leaveRoom(roomId: string) {
-    this.socket.emit('leaveRoom', { roomId });
+  leaveRoom() {
+    this.socket.emit('leaveRoom');
   }
 
   // ------------------------
@@ -188,8 +188,6 @@ class SocketClient {
     this.socket.on('connect', () => {
       // 🔥 念のため接続時にもauthを再適用
       this.socket.auth = this.currentAuth;
-
-      console.log('[socket] connected', this.socket.id);
     });
 
     this.socket.on('disconnect', () => {

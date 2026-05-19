@@ -19,6 +19,8 @@ import { handleStand } from '../actions/handleStand';
 import { handleConsumeEvent } from '../actions/gameFlowItems';
 import { processGameFlow } from '../actions/processGameFlow';
 
+let requestCounter = 0;
+
 // 仮のState / Config（各ゲームで型を定義する）
 type State = any;
 type Config = any;
@@ -61,7 +63,23 @@ export const Flip7Engine: GameEngine<State, Action, Config> = {
       default:
         throw new GameError('INVALID_ACTION', 'このアクションは存在しません');
     }
+    const reqId = ++requestCounter;
+    const now = new Date().toISOString();
 
-    return processGameFlow(newState, config);
+    console.log(
+      `[REQ ${reqId}] ${now} ▶ handleAction START | player=${newState.currentPlayer} | action=${action.type}`,
+    );
+    console.log(
+      `[REQ ${reqId}] BEFORE processGameFlow | currentPlayer=${newState.currentPlayer}`,
+    );
+
+    newState = processGameFlow(newState, config);
+
+    console.log(
+      `[REQ ${reqId}] AFTER processGameFlow  | currentPlayer=${newState.currentPlayer}`,
+    );
+    console.log(`[REQ ${reqId}] ${now} ◀ handleAction END`);
+
+    return newState;
   },
 };

@@ -15,7 +15,6 @@ export class RoomManager {
   createRoom(
     roomId: string,
     hostId: string,
-    socketId: string,
     name: string,
     isDisconnected: boolean = false,
   ): Room {
@@ -29,7 +28,7 @@ export class RoomManager {
     const room: Room = {
       id: roomId,
       hostId,
-      players: [{ id: hostId, name, socketId, isDisconnected }],
+      players: [{ id: hostId, name, isDisconnected }],
       status: 'waiting',
 
       // ゲーム関連
@@ -49,7 +48,6 @@ export class RoomManager {
   joinRoom(
     roomId: string,
     playerId: string,
-    socketId: string,
     name: string,
     isDisconnected: boolean = false,
   ): Room {
@@ -63,7 +61,6 @@ export class RoomManager {
 
     // 🔥 reconnect対応
     if (existing) {
-      existing.socketId = socketId;
       existing.name = name;
 
       // 🔥 disconnectタイマー解除
@@ -84,7 +81,7 @@ export class RoomManager {
       throw new SystemError('ROOM_FULL', 'ルームの参加上限に達しています');
     }
 
-    room.players.push({ id: playerId, name, socketId, isDisconnected });
+    room.players.push({ id: playerId, name, isDisconnected });
 
     return room;
   }
@@ -171,14 +168,6 @@ export class RoomManager {
     }
 
     return room.players.map((p) => p.id);
-  }
-
-  getSocketId(roomId: string, playerId: string): string | undefined {
-    const room = this.rooms.get(roomId);
-
-    if (!room) return undefined;
-
-    return room.players.find((p) => p.id === playerId)?.socketId;
   }
 }
 

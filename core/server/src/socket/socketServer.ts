@@ -1,6 +1,7 @@
 // server/src/socket/socketServer.ts
 import { Server } from 'socket.io';
 import { roomManager } from '../room/RoomManager';
+import { connectionManager } from '../connection/ConnectionManager';
 import { SystemError } from 'shared/types';
 import { getGameDefinition } from '@core-server/gameRegistry';
 
@@ -10,9 +11,6 @@ export function createSocketServer(httpServer: any) {
       origin: '*',
     },
   });
-
-  // 🔥 DEBUG: global socket tracking (playerId -> Set<socketId>)
-  const playerSockets = new Map<string, Set<string>>();
 
   // 🔥 共通: roomUpdate emit helper
   const emitRoomUpdate = (roomId: string) => {
@@ -47,11 +45,9 @@ export function createSocketServer(httpServer: any) {
 
     if (toPublic) {
       room.players.forEach((p: any) => {
-        const socketId = p.socketId;
-        if (!socketId) return;
-
         const outputState = toPublic(state, p.id);
-        io.to(socketId).emit(eventName, outputState);
+
+        connectionManager.emitToPlayer(p.id, eventName, outputState);
       });
     } else {
       io.to(room.id).emit(eventName, state);
@@ -72,8 +68,14 @@ export function createSocketServer(httpServer: any) {
 
         const wasDisconnected = player.isDisconnected;
 
-        player.socketId = socket.id;
         player.isDisconnected = false;
+
+        // 🔥 socketにplayer情報を保持
+        socket.data.playerId = authPlayerId;
+        socket.data.roomId = authRoomId;
+
+        // 🔥 reconnect playerを先に登録
+        connectionManager.connect(authPlayerId, socket);
 
         if (wasDisconnected) {
           if (!room.gameType) {
@@ -82,26 +84,14 @@ export function createSocketServer(httpServer: any) {
             const state = room.gameState;
             if (state) {
               const engine = getGameDefinition(room.gameType!).engine;
-              const outputState = engine.toPublicState
-                ? engine.toPublicState(state, authPlayerId)
-                : state;
-              socket.emit('gameStateUpdate', outputState);
+
+              emitGameState(room, state, 'gameStateUpdate', engine);
             }
           }
 
           // 🔥 reconnect時もroom状態を同期
           emitRoomUpdate(authRoomId);
         }
-
-        // 🔥 socketにplayer情報を保持
-        socket.data.playerId = authPlayerId;
-        socket.data.roomId = authRoomId;
-
-        // 🔥 DEBUG: register socket for player (reconnect path)
-        if (!playerSockets.has(authPlayerId)) {
-          playerSockets.set(authPlayerId, new Set());
-        }
-        playerSockets.get(authPlayerId)!.add(socket.id);
 
         // 🔥 reconnect時：削除タイマーキャンセル
         roomManager.clearDisconnectTimeout?.(authRoomId, authPlayerId);
@@ -116,17 +106,30 @@ export function createSocketServer(httpServer: any) {
       roomManager.clearDisconnectTimeout?.(roomId, playerId);
 
       let room = roomManager.getRoom(roomId);
+      let isReconnect = false;
 
       if (!room) {
-        room = roomManager.createRoom(roomId, playerId, socket.id, name);
+        room = roomManager.createRoom(roomId, playerId, name);
       } else {
         const existingPlayer = room.players.find((p: any) => p.id === playerId);
 
         if (existingPlayer) {
-          existingPlayer.socketId = socket.id;
+          isReconnect = true;
           existingPlayer.isDisconnected = false;
+
+          // reconnect playerを先に登録
+          connectionManager.connect(playerId, socket);
+
+          if (room.status === 'playing') {
+            if (!room.gameType || !room.gameState) return;
+
+            const engine = getGameDefinition(room.gameType).engine;
+            const nowState = room.gameState;
+
+            emitGameState(room, nowState, 'gameStateUpdate', engine);
+          }
         } else {
-          roomManager.joinRoom(roomId, playerId, socket.id, name);
+          roomManager.joinRoom(roomId, playerId, name);
         }
       }
 
@@ -134,17 +137,57 @@ export function createSocketServer(httpServer: any) {
       socket.data.playerId = playerId;
       socket.data.roomId = roomId;
 
-      // 🔥 DEBUG: register socket for player (join path)
-      if (!playerSockets.has(playerId)) {
-        playerSockets.set(playerId, new Set());
-      }
-      playerSockets.get(playerId)!.add(socket.id);
+      connectionManager.connect(playerId, socket);
 
       socket.join(roomId);
 
-      room.status = 'waiting';
+      // 新規参加時のみwaitingへ戻す
+      if (!isReconnect) {
+        room.status = 'waiting';
+      }
 
       // 🔥 join時に全員へroom状態を通知
+      emitRoomUpdate(roomId);
+    });
+
+    // ルーム退出（能動退出）
+    socket.on('leaveRoom', () => {
+      const playerId = socket.data.playerId;
+      const roomId = socket.data.roomId;
+
+      if (!roomId || !playerId) return;
+
+      const room = roomManager.getRoom(roomId);
+      if (!room) return;
+
+      // reconnect猶予タイマーを削除
+      roomManager.clearDisconnectTimeout?.(roomId, playerId);
+
+      // socket接続解除
+      connectionManager.disconnect(playerId, socket);
+
+      // roomからプレイヤー削除
+      roomManager.leaveRoom(roomId, playerId);
+
+      // socket room離脱
+      socket.leave(roomId);
+
+      const updatedRoom = roomManager.getRoom(roomId);
+
+      // 誰もいなくなったらroom削除
+      if (!updatedRoom || updatedRoom.players.length === 0) {
+        roomManager.deleteRoom(roomId);
+        io.to(roomId).emit('roomClosed');
+        return;
+      }
+
+      // host退出ならroom削除
+      if (updatedRoom.hostId === playerId) {
+        roomManager.deleteRoom(roomId);
+        io.to(roomId).emit('roomClosed');
+        return;
+      }
+
       emitRoomUpdate(roomId);
     });
 
@@ -201,6 +244,7 @@ export function createSocketServer(httpServer: any) {
       if (!room) return;
 
       room.gameType = gameType;
+
       room.status = 'gameWaiting';
 
       emitRoomUpdate(roomId);
@@ -299,7 +343,6 @@ export function createSocketServer(httpServer: any) {
         room.gameState = null;
         room.gameConfig = null;
         room.actionLogs = [];
-
         room.status = 'waiting';
 
         // 🔥 これが超重要
@@ -315,12 +358,8 @@ export function createSocketServer(httpServer: any) {
     socket.on('disconnect', () => {
       const playerId = socket.data.playerId;
 
-      // 🔥 DEBUG: unregister socket from global map
-      if (playerId && playerSockets.has(playerId)) {
-        playerSockets.get(playerId)!.delete(socket.id);
-        if (playerSockets.get(playerId)!.size === 0) {
-          playerSockets.delete(playerId);
-        }
+      if (playerId) {
+        connectionManager.disconnect(playerId, socket);
       }
 
       const roomId = socket.data.roomId;
@@ -333,8 +372,8 @@ export function createSocketServer(httpServer: any) {
       const player = room.players.find((p: any) => p.id === playerId);
       if (!player) return;
 
-      // socket不一致なら無視（古い接続）
-      if (player.socketId !== socket.id) {
+      // 現在の接続でなければ無視（古い接続）
+      if (!connectionManager.isCurrentSocket(playerId, socket)) {
         return;
       }
 
