@@ -64,9 +64,7 @@ export function createSocketServer(httpServer: any) {
       const player = room?.players.find((p: any) => p.id === authPlayerId);
 
       if (room && player) {
-        socket.join(authRoomId); // ⭐ これ絶対必要
-
-        const wasDisconnected = player.isDisconnected;
+        socket.join(authRoomId);
 
         player.isDisconnected = false;
 
@@ -77,20 +75,13 @@ export function createSocketServer(httpServer: any) {
         // 🔥 reconnect playerを先に登録
         connectionManager.connect(authPlayerId, socket);
 
-        if (wasDisconnected) {
-          if (!room.gameType) {
-            emitRoomUpdate(authRoomId);
-          } else {
-            const state = room.gameState;
-            if (state) {
-              const engine = getGameDefinition(room.gameType!).engine;
+        // 🔥 reconnect成功時は常に状態同期
+        emitRoomUpdate(authRoomId);
 
-              emitGameState(room, state, 'gameStateUpdate', engine);
-            }
-          }
+        if (room.gameType && room.gameState) {
+          const engine = getGameDefinition(room.gameType).engine;
 
-          // 🔥 reconnect時もroom状態を同期
-          emitRoomUpdate(authRoomId);
+          emitGameState(room, room.gameState, 'gameStateUpdate', engine);
         }
 
         // 🔥 reconnect時：削除タイマーキャンセル
