@@ -17,9 +17,12 @@ export default function GameBridge() {
   }
 
   const { loaded, progress } = useAssets(room.gameType);
+  const allPlayersLoaded = room.players.every((p) => p.isAssetReady);
 
   const game = room.gameType;
   const [def, setDef] = useState<GameDefinition | null>(null);
+
+  const isReady = loaded && allPlayersLoaded;
 
   useEffect(() => {
     const load = async () => {
@@ -33,7 +36,7 @@ export default function GameBridge() {
     load();
   }, [room.gameType]);
 
-  if (!def || !loaded) {
+  if (!def || !isReady) {
     return <LoadingScreen progress={progress} />;
   }
 
