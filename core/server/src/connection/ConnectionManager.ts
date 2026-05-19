@@ -1,39 +1,34 @@
 import type { Socket } from 'socket.io';
 
-export class ConnectionManager {
-  private playerSockets = new Map<string, Set<Socket>>();
+class ConnectionManager {
+  private playerSockets = new Map<string, Socket>();
 
   connect(playerId: string, socket: Socket) {
-    const sockets = this.playerSockets.get(playerId);
+    const oldSocket = this.playerSockets.get(playerId);
 
-    if (!sockets) {
-      this.playerSockets.set(playerId, new Set([socket]));
-      return;
+    this.playerSockets.set(playerId, socket);
+
+    // 同一playerの古い接続を切断
+    if (oldSocket && oldSocket.id !== socket.id) {
+      oldSocket.disconnect();
     }
-
-    sockets.add(socket);
   }
 
   disconnect(playerId: string, socket: Socket) {
-    const sockets = this.playerSockets.get(playerId);
+    const currentSocket = this.playerSockets.get(playerId);
 
-    if (!sockets) {
+    // 古いsocketのdisconnectは無視
+    if (!currentSocket || currentSocket.id !== socket.id) {
       return;
     }
 
-    sockets.delete(socket);
-
-    if (sockets.size === 0) {
-      this.playerSockets.delete(playerId);
-    }
+    this.playerSockets.delete(playerId);
   }
 
-  getSockets(playerId: string): Socket[] {
-    return [...(this.playerSockets.get(playerId) ?? [])];
-  }
+  // getSockets removed
 
   getSocket(playerId: string): Socket | undefined {
-    return this.getSockets(playerId)[0];
+    return this.playerSockets.get(playerId);
   }
 
   isConnected(playerId: string): boolean {
@@ -41,11 +36,9 @@ export class ConnectionManager {
   }
 
   emitToPlayer<T>(playerId: string, eventName: string, payload: T) {
-    const sockets = this.getSockets(playerId);
+    const socket = this.getSocket(playerId);
 
-    sockets.forEach((socket) => {
-      socket.emit(eventName, payload);
-    });
+    socket?.emit(eventName, payload);
   }
 
   emitToPlayers<T>(
@@ -59,13 +52,13 @@ export class ConnectionManager {
   }
 
   isCurrentSocket(playerId: string, socket: Socket): boolean {
-    const sockets = this.playerSockets.get(playerId);
+    const currentSocket = this.playerSockets.get(playerId);
 
-    if (!sockets) {
+    if (!currentSocket) {
       return false;
     }
 
-    return sockets.has(socket);
+    return currentSocket.id === socket.id;
   }
 
   clearPlayer(playerId: string) {
