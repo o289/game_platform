@@ -81,14 +81,13 @@ export function useRoom(name: string) {
   );
 
   useEffect(() => {
-    console.log('復帰effect発火');
     const savedRoomId = sessionStorage.getItem('roomId');
     const savedPlayerId = sessionStorage.getItem('playerId');
     const savedName = sessionStorage.getItem('name');
 
     if (!savedRoomId || !savedPlayerId || !savedName) return;
 
-    socketClient.joinRoom(savedRoomId, savedPlayerId, savedName); // ← 追加
+    socketClient.connect({ roomId: savedRoomId, playerId: savedPlayerId });
 
     setRoomId(savedRoomId);
     setPlayerId(savedPlayerId);
