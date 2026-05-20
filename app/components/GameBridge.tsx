@@ -6,20 +6,21 @@ import { GameDefinition } from '@core-server/gameRegistry';
 import { useAssets } from 'app/hooks/useAssets';
 
 export default function GameBridge() {
-  const { room, gameState, setGameState, myPlayerId } = useRoomContext();
+  const { room } = useRoomContext();
 
   // ルーム未取得
   if (!room) return null;
 
+  const game = room.gameType;
+
   // ゲーム未選択
-  if (!room.gameType) {
+  if (!game) {
     return <div>そのゲームは存在しません</div>;
   }
 
-  const { loaded, progress } = useAssets(room.gameType);
+  const { loaded, progress } = useAssets(game);
   const allPlayersLoaded = room.players.every((p) => p.isAssetReady);
 
-  const game = room.gameType;
   const [def, setDef] = useState<GameDefinition | null>(null);
 
   const isReady = loaded && allPlayersLoaded;
@@ -34,7 +35,7 @@ export default function GameBridge() {
     };
 
     load();
-  }, [room.gameType]);
+  }, [game]);
 
   if (!def || !isReady) {
     return <LoadingScreen progress={progress} />;
@@ -47,13 +48,7 @@ export default function GameBridge() {
     (acc, Provider) => {
       return <Provider>{acc}</Provider>;
     },
-    <GameComponent
-      gameState={gameState}
-      setGameState={setGameState}
-      roomId={room.id}
-      hostId={room.hostId}
-      myPlayerId={myPlayerId}
-    />,
+    <GameComponent />,
   );
 
   return wrapped;
