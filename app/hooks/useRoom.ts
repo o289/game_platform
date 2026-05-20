@@ -6,17 +6,6 @@ import { useRoomContext } from '@core-client/context/RoomContext';
 // シンプルなID生成（後で差し替え可能）
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
-function generateRoomId(length = 6) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-
-  for (let i = 0; i < length; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-
-  return result;
-}
-
 export function useRoom(name: string) {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -42,18 +31,14 @@ export function useRoom(name: string) {
 
     sessionStorage.setItem('name', name);
 
-    const newRoomId = generateRoomId();
     const newPlayerId = generateId();
 
-    setRoomId(newRoomId);
     setPlayerId(newPlayerId);
     setMyPlayerId(newPlayerId);
 
-    sessionStorage.setItem('roomId', newRoomId);
     sessionStorage.setItem('playerId', newPlayerId);
 
-    socketClient.joinRoom(newRoomId, newPlayerId, name);
-    setCurrentRoomId(newRoomId);
+    socketClient.createRoom(newPlayerId, name);
   }, [name]);
 
   const onJoinRoom = useCallback(
@@ -141,6 +126,14 @@ export function useRoom(name: string) {
       });
     });
 
+    // --- Room created ---
+    socketClient.on('roomCreated', (payload: any) => {
+      setRoomId(payload.roomId);
+      setCurrentRoomId(payload.roomId);
+
+      sessionStorage.setItem('roomId', payload.roomId);
+    });
+
     // --- Game started ---
     socketClient.on('gameStarted', (state: any) => {
       setGameState(state);
@@ -175,6 +168,7 @@ export function useRoom(name: string) {
     });
 
     return () => {
+      socketClient.off('roomCreated');
       socketClient.off('roomUpdate');
       socketClient.off('gameStarted');
       socketClient.off('gameStateUpdate');

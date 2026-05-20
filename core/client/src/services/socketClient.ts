@@ -7,6 +7,7 @@ const SOCKET_EVENTS = [
   'gameStateUpdate',
   'roomUpdate',
   'gameStarted',
+  'roomCreated',
   'roomClosed',
   'action_error',
   'gameSelected',
@@ -64,6 +65,14 @@ class SocketClient {
   // ------------------------
   // Room
   // ------------------------
+  createRoom(playerId: string, name: string) {
+    this.ensureConnected(() => {
+      this.socket.emit('createRoom', {
+        playerId,
+        name,
+      });
+    });
+  }
 
   joinRoom(roomId: string, playerId: string, name: string) {
     this.currentAuth = { roomId, playerId };

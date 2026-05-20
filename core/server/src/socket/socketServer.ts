@@ -1,9 +1,19 @@
-// server/src/socket/socketServer.ts
 import { Server } from 'socket.io';
 import { roomManager } from '../room/RoomManager';
 import { connectionManager } from '../connection/ConnectionManager';
 import { SystemError, Player, Room } from 'shared/types';
 import { getGameDefinition } from '@core-server/gameRegistry';
+
+function generateRoomId(length = 6) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+
+  for (let i = 0; i < length; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return result;
+}
 
 export function createSocketServer(httpServer: any) {
   const io = new Server(httpServer, {
@@ -89,40 +99,52 @@ export function createSocketServer(httpServer: any) {
       }
     }
 
+    // ルームを新規作成
+    socket.on('createRoom', ({ playerId, name }) => {
+      if (!name) return;
+
+      // サーバー側でroomId生成
+      const roomId = generateRoomId();
+
+      // room作成
+      const room = roomManager.createRoom(roomId, playerId, name);
+
+      // socket情報保持
+      socket.data.playerId = playerId;
+      socket.data.roomId = roomId;
+
+      // connection登録
+      connectionManager.connect(playerId, socket);
+
+      // socket.io room参加
+      socket.join(roomId);
+
+      // クライアントへroomId返却
+      socket.emit('roomCreated', {
+        roomId,
+        playerId,
+        room,
+      });
+
+      // 全体同期
+      emitRoomUpdate(roomId);
+    });
+
     // ルーム参加
     socket.on('joinRoom', ({ roomId, playerId, name }) => {
       if (!name) return;
 
-      // 🔥 join時：削除タイマーキャンセル（再接続対応）
-      roomManager.clearDisconnectTimeout?.(roomId, playerId);
+      // ** ルームエラーはsystemErrorを発動させて、それとして処理する **
+      // const room = roomManager.getRoom(roomId);
 
-      let room = roomManager.getRoom(roomId);
-      let isReconnect = false;
+      // if (!room) {
+      //   socket.emit('join_error', {
+      //     code: 'ROOM_NOT_FOUND',
+      //   });
+      //   return;
+      // }
 
-      if (!room) {
-        room = roomManager.createRoom(roomId, playerId, name);
-      } else {
-        const existingPlayer = room.players.find((p: any) => p.id === playerId);
-
-        if (existingPlayer) {
-          isReconnect = true;
-          existingPlayer.isDisconnected = false;
-
-          // reconnect playerを先に登録
-          connectionManager.connect(playerId, socket);
-
-          if (room.status === 'playing') {
-            if (!room.gameType || !room.gameState) return;
-
-            const engine = getGameDefinition(room.gameType).engine;
-            const nowState = room.gameState;
-
-            emitGameState(room, nowState, 'gameStateUpdate', engine);
-          }
-        } else {
-          roomManager.joinRoom(roomId, playerId, name);
-        }
-      }
+      roomManager.joinRoom(roomId, playerId, name);
 
       // socket情報更新
       socket.data.playerId = playerId;
@@ -131,11 +153,6 @@ export function createSocketServer(httpServer: any) {
       connectionManager.connect(playerId, socket);
 
       socket.join(roomId);
-
-      // 新規参加時のみwaitingへ戻す
-      if (!isReconnect) {
-        room.status = 'waiting';
-      }
 
       // 🔥 join時に全員へroom状態を通知
       emitRoomUpdate(roomId);
