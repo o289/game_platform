@@ -1,6 +1,5 @@
 import type { GameEngine } from '@core-server/engine/GameEngine';
-import type { GameType } from '../../shared/types/Game';
-import { GAMES } from '../../shared/types/Game';
+import type { GAMES, GameType } from '../../shared/types/Game';
 import { Action } from '../../shared/types';
 
 import fs from 'fs';
