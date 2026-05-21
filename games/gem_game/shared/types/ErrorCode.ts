@@ -11,9 +11,3 @@ export const ACTION_ERROR_CODES = [
   'DECK_EMPTY',
   'UNKNOWN_ACTION_TYPE',
 ] as const;
-
-export function isRoomError(
-  code: string,
-): code is (typeof ACTION_ERROR_CODES)[number] {
-  return (ACTION_ERROR_CODES as readonly string[]).includes(code);
-}
