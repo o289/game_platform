@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { GameType, Room } from 'shared/types';
+import { GameType, Room, SystemError } from 'shared/types';
 import { socketClient } from '@core-client/services/socketClient';
 import { useRoomContext } from '@core-client/context/RoomContext';
 
@@ -9,6 +9,7 @@ const generateId = () => Math.random().toString(36).slice(2, 10);
 export function useRoom(name: string) {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
+  const [systemError, setSystemError] = useState<SystemError | null>(null);
 
   const {
     room,
@@ -95,8 +96,11 @@ export function useRoom(name: string) {
 
   const onSelectGame = (gameId: GameType) => {
     if (!roomId) return;
-
     socketClient.selectGame(roomId, gameId);
+  };
+
+  const onSystemErrorClose = () => {
+    setSystemError(null);
   };
 
   useEffect(() => {
@@ -167,12 +171,18 @@ export function useRoom(name: string) {
       setGameState(null);
     });
 
+    // --- System error ---
+    socketClient.on('system_error', (error: any) => {
+      setSystemError(error);
+    });
+
     return () => {
       socketClient.off('roomCreated');
       socketClient.off('roomUpdate');
       socketClient.off('gameStarted');
       socketClient.off('gameStateUpdate');
       socketClient.off('gameSelected');
+      socketClient.off('system_error');
       socketClient.off('leftRoom');
     };
   }, []);
@@ -186,10 +196,12 @@ export function useRoom(name: string) {
       isHost: false,
       status: 'init',
       isCurrentRoom: false,
+      systemError,
       onCreateRoom,
       onJoinRoom,
       onLeaveRoom,
       onSelectGame,
+      onSystemErrorClose,
     };
   }
   return {
@@ -200,9 +212,11 @@ export function useRoom(name: string) {
     isHost,
     status,
     isCurrentRoom,
+    systemError,
     onCreateRoom,
     onJoinRoom,
     onLeaveRoom,
     onSelectGame,
+    onSystemErrorClose,
   };
 }

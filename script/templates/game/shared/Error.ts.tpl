@@ -8,6 +8,6 @@ import { GameErrorCode } from "./ErrorCode";
  */
 export class GameError extends BaseError<GameErrorCode> {
   constructor(code: GameErrorCode, message: string) {
-    super(code, message);
+    super('game', code, message);
   }
 }

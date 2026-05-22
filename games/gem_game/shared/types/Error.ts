@@ -5,6 +5,6 @@ import { ACTION_ERROR_CODES } from './ErrorCode';
 export type ActionErrorCode = (typeof ACTION_ERROR_CODES)[number];
 export class ActionError extends BaseError<ActionErrorCode> {
   constructor(code: ActionErrorCode, message: string) {
-    super(code, message);
+    super('game', code, message);
   }
 }

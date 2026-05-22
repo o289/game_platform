@@ -23,10 +23,11 @@ export class RoomManager {
 
   createRoom(roomId: string, hostId: string, name: string): Room {
     if (this.rooms.has(roomId)) {
-      throw new SystemError(
-        'ROOM_ALREADY_EXISTS',
-        'そのルームはすでに作られています',
-      );
+      throw new SystemError({
+        code: 'ROOM_ALREADY_EXISTS',
+        message: 'そのルームはすでに作られています',
+        recovery: [],
+      });
     }
 
     const room: Room = {
@@ -53,7 +54,11 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
 
     if (!room) {
-      throw new SystemError('ROOM_NOT_FOUND', '部屋が見つかりません');
+      throw new SystemError({
+        code: 'ROOM_NOT_FOUND',
+        message: '部屋が見つかりません',
+        recovery: [],
+      });
     }
 
     const existing = room.players.find((p) => p.id === playerId);
@@ -70,14 +75,19 @@ export class RoomManager {
 
     // 🔥 新規参加のみ許可
     if (room.status !== 'waiting') {
-      throw new SystemError(
-        'GAME_ALREADY_STARTED',
-        'ゲームはすでに開始されています',
-      );
+      throw new SystemError({
+        code: 'GAME_ALREADY_STARTED',
+        message: 'ゲームはすでに開始されています',
+        recovery: [],
+      });
     }
 
     if (room.players.length >= 4) {
-      throw new SystemError('ROOM_FULL', 'ルームの参加上限に達しています');
+      throw new SystemError({
+        code: 'ROOM_FULL',
+        message: 'ルームの参加上限に達しています',
+        recovery: [],
+      });
     }
 
     room.players.push(this.createPlayer(playerId, name));
@@ -135,14 +145,19 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
 
     if (!room) {
-      throw new SystemError('ROOM_NOT_FOUND', '部屋が見つかりません');
+      throw new SystemError({
+        code: 'ROOM_NOT_FOUND',
+        message: '部屋が見つかりません',
+        recovery: [],
+      });
     }
 
     if (!room.gameType) {
-      throw new SystemError(
-        'GAME_NOT_INITIALIZED',
-        'ゲームタイプが設定されていません',
-      );
+      throw new SystemError({
+        code: 'GAME_NOT_INITIALIZED',
+        message: 'ゲームタイプが設定されていません',
+        recovery: [],
+      });
     }
 
     return room.status;
@@ -152,7 +167,11 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
 
     if (!room) {
-      throw new SystemError('ROOM_NOT_FOUND', '部屋が見つかりません');
+      throw new SystemError({
+        code: 'ROOM_NOT_FOUND',
+        message: '部屋が見つかりません',
+        recovery: [],
+      });
     }
 
     // キャッシュとして保存（真実はactionLogs）
@@ -163,7 +182,11 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
 
     if (!room) {
-      throw new SystemError('ROOM_NOT_FOUND', '部屋が見つかりません');
+      throw new SystemError({
+        code: 'ROOM_NOT_FOUND',
+        message: '部屋が見つかりません',
+        recovery: [],
+      });
     }
 
     return room.players.map((p) => p.id);

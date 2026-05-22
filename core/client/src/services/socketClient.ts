@@ -10,6 +10,7 @@ const SOCKET_EVENTS = [
   'roomCreated',
   'roomClosed',
   'action_error',
+  'system_error',
   'gameSelected',
   'leftRoom',
 ] as const;
@@ -208,13 +209,10 @@ class SocketClient {
       this.socket.auth = this.currentAuth;
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('[socket] disconnected');
-    });
+    this.socket.on('disconnect', () => {});
 
     // 🔥 reconnect時にauthを再適用
     this.socket.io.on('reconnect_attempt', () => {
-      console.log('[socket] reconnect attempt');
       this.socket.auth = this.currentAuth;
     });
   }

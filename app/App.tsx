@@ -1,14 +1,17 @@
 import HomeScreen from '@core-client/layouts/HomeScreen';
 import WaitingScreen from '@core-client/layouts/WaitingScreen';
+import GameBridge from './components/GameBridge';
+import SystemErrorScreen from '@core-client/layouts/SystemErrorScreen';
+
 import { useRoom } from './hooks/useRoom';
 import { useState } from 'react';
-import GameBridge from './components/GameBridge';
 import { GameType } from 'shared/types';
 
 export const App = () => {
   const [name, setName] = useState<string>('');
   const room = useRoom(name);
 
+  const happenError = room.systemError;
   const handleCreateRoom = () => {
     room.onCreateRoom();
   };
@@ -26,39 +29,48 @@ export const App = () => {
         backgroundPosition: 'center',
       }}
     >
-      {/* オーバーレイ（暗くする） */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
+      <>
+        {/* オーバーレイ（暗くする） */}
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
 
-      <div className="relative flex flex-col items-center justify-center gap-6 w-full h-full px-4 text-white">
-        {!room.isCurrentRoom && (
-          <HomeScreen
-            onCreateRoom={handleCreateRoom}
-            onJoinRoom={handleJoinRoom}
-            name={name}
-            setName={setName}
-          />
-        )}
+        <div className="relative flex flex-col items-center justify-center gap-6 w-full h-full px-4 text-white">
+          {happenError && (
+            <SystemErrorScreen
+              message={happenError.message}
+              onClose={() => room.onSystemErrorClose()}
+            />
+          )}
 
-        {room.isCurrentRoom && room.status === 'waiting' && (
-          <WaitingScreen
-            roomId={room.roomId || ''}
-            players={room.players || []}
-            playerId={room.playerId || ''}
-            hostId={room.hostId || ''}
-            isHost={room.isHost || false}
-            onSelectGame={(gameId: GameType) => room.onSelectGame(gameId)}
-            onLeaveRoom={() => {
-              room.onLeaveRoom();
-            }}
-          />
-        )}
-      </div>
+          {!room.isCurrentRoom && (
+            <HomeScreen
+              onCreateRoom={handleCreateRoom}
+              onJoinRoom={handleJoinRoom}
+              name={name}
+              setName={setName}
+            />
+          )}
 
-      {(room.status === 'gameWaiting' || room.status === 'playing') && (
-        <div className="absolute inset-0 w-full h-dvh overflow-hidden">
-          <GameBridge />
+          {room.isCurrentRoom && room.status === 'waiting' && (
+            <WaitingScreen
+              roomId={room.roomId || ''}
+              players={room.players || []}
+              playerId={room.playerId || ''}
+              hostId={room.hostId || ''}
+              isHost={room.isHost || false}
+              onSelectGame={(gameId: GameType) => room.onSelectGame(gameId)}
+              onLeaveRoom={() => {
+                room.onLeaveRoom();
+              }}
+            />
+          )}
         </div>
-      )}
+
+        {(room.status === 'gameWaiting' || room.status === 'playing') && (
+          <div className="absolute inset-0 w-full h-dvh overflow-hidden">
+            <GameBridge />
+          </div>
+        )}
+      </>
     </div>
   );
 };
