@@ -19,9 +19,9 @@ export default function GameBridge() {
   }
 
   const { loaded, progress } = useAssets(game);
-  const allPlayersLoaded = room.players.every((p) => p.isAssetReady);
 
   const [def, setDef] = useState<GameDefinition | null>(null);
+  const allPlayersLoaded = room.players.every((p) => p.isAssetReady);
 
   const isReady = loaded && allPlayersLoaded;
 
