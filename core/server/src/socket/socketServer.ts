@@ -22,6 +22,33 @@ export function createSocketServer(httpServer: any) {
     },
   });
 
+  // IDの取得
+  const checkHasRoomIdAndPlayerID = (socket: Socket) => {
+    const roomId = socket.data.roomId;
+    const playerId = socket.data.playerId;
+
+    if (!roomId) {
+      throw new SystemError({
+        code: 'ROOM_NOT_FOUND',
+        message: 'socketにroomIdが存在しません',
+        recovery: ['session_cleanup'],
+      });
+    }
+
+    if (!playerId) {
+      throw new SystemError({
+        code: 'PLAYER_NOT_FOUND',
+        message: 'socketにplayerIdが存在しません',
+        recovery: ['player_delete'],
+      });
+    }
+
+    return {
+      roomId,
+      playerId,
+    };
+  };
+
   // ルーム検索
   const findRoom = (roomId: string) => {
     const room = roomManager.getRoom(roomId);
@@ -84,8 +111,7 @@ export function createSocketServer(httpServer: any) {
     }
   };
 
-  // システムエラー処理
-  // 🔥 共通: system error handler
+  // リカバリーシステム
   const executeRecovery = (err: SystemError, socket: Socket) => {
     const roomId = err.metadata?.roomId ?? socket.data.roomId;
     const playerId = err.metadata?.playerId ?? socket.data.playerId;
@@ -93,6 +119,30 @@ export function createSocketServer(httpServer: any) {
     let needsSync = false;
 
     for (const recovery of err.recovery) {
+      // session cleanup は roomId不要
+      if (recovery === 'session_cleanup') {
+        if (playerId) {
+          connectionManager.disconnect(playerId, socket);
+        }
+
+        socket.data.playerId = null;
+        socket.data.roomId = null;
+
+        socket.disconnect(true);
+
+        continue;
+      }
+
+      // ここから先はroomId必須
+      if (!roomId) {
+        socket.emit('system_error', {
+          code: 'ROOM_ID_NOT_FOUND',
+          message: 'Recovery failed: roomId not found',
+        });
+
+        continue;
+      }
+
       switch (recovery) {
         case 'restore_snapshot': {
           const snapshot = err.metadata?.roomSnapshot;
@@ -107,16 +157,6 @@ export function createSocketServer(httpServer: any) {
             continue;
           }
 
-          // roomId不在
-          if (!roomId) {
-            socket.emit('system_error', {
-              code: 'ROOM_ID_NOT_FOUND',
-              message: 'Failed to restore room',
-            });
-
-            continue;
-          }
-
           // ルームマネージャーに実装していないのでコメントアウト
           // roomManager.restoreRoom(roomId, structuredClone(snapshot));
 
@@ -126,16 +166,6 @@ export function createSocketServer(httpServer: any) {
         }
 
         case 'player_delete': {
-          // roomId不在
-          if (!roomId) {
-            socket.emit('system_error', {
-              code: 'ROOM_ID_NOT_FOUND',
-              message: 'Failed to cleanup player',
-            });
-
-            continue;
-          }
-
           // playerId不在
           if (!playerId) {
             socket.emit('system_error', {
@@ -161,16 +191,6 @@ export function createSocketServer(httpServer: any) {
         }
 
         case 'room_delete': {
-          // roomId不在
-          if (!roomId) {
-            socket.emit('system_error', {
-              code: 'ROOM_ID_NOT_FOUND',
-              message: 'Failed to delete room',
-            });
-
-            continue;
-          }
-
           roomManager.deleteRoom(roomId);
 
           io.to(roomId).emit('roomClosed');
@@ -196,20 +216,11 @@ export function createSocketServer(httpServer: any) {
 
   // 🔥 共通: roomUpdate emit helper
   const emitRoomUpdate = (roomId: string) => {
-    try {
-      const room = findRoom(roomId);
+    const room = findRoom(roomId);
 
-      io.to(roomId).emit('roomUpdate', {
-        ...room,
-      });
-    } catch (err) {
-      // 別で処理を実装
-      if (err instanceof SystemError) {
-        console.error('[socket] roomUpdate error', err.code, err.message);
-      } else {
-        console.error('[socket] roomUpdate unexpected error', err);
-      }
-    }
+    io.to(roomId).emit('roomUpdate', {
+      ...room,
+    });
   };
 
   // ⭐ 共通: gameState送信（public/private対応）
@@ -339,12 +350,7 @@ export function createSocketServer(httpServer: any) {
 
     // ルーム退出（能動退出）
     safeOn('leaveRoom', () => {
-      const playerId = socket.data.playerId;
-      const roomId = socket.data.roomId;
-
-      if (!roomId || !playerId) return;
-
-      const room = findRoom(roomId);
+      const { roomId, playerId } = checkHasRoomIdAndPlayerID(socket);
 
       // reconnect猶予タイマーを削除
       roomManager.clearDisconnectTimeout?.(roomId, playerId);
@@ -379,22 +385,28 @@ export function createSocketServer(httpServer: any) {
 
     // ゲームアクション
     safeOn('action', (action) => {
-      const playerId = socket.data.playerId;
-      const roomId = socket.data.roomId;
-
-      if (!roomId || !playerId) return;
+      const { roomId } = checkHasRoomIdAndPlayerID(socket);
 
       const room = findRoom(roomId);
 
       if (!room.gameType) {
-        console.warn('action ignored: gameType not set');
-        return;
+        throw new SystemError({
+          code: 'GAME_NOT_INITIALIZED',
+          message: 'ゲームが選択されていません',
+          recovery: ['room_delete'],
+        });
       }
 
       const engine = getGameDefinition(room.gameType).engine;
 
       // 🔥 初期化（初回のみ）
-      if (!room.gameState) return;
+      if (!room.gameState) {
+        throw new SystemError({
+          code: 'GAME_NOT_STARTED',
+          message: 'ゲームが開始されていません',
+          recovery: ['restore_snapshot'],
+        });
+      }
 
       const enrichedAction = {
         ...action,
@@ -445,96 +457,95 @@ export function createSocketServer(httpServer: any) {
     safeOn('startGame', ({ roomId, gameType, config }) => {
       const room = findRoom(roomId);
 
-      if (!gameType) return;
+      if (!gameType) {
+        throw new SystemError({
+          code: 'GAME_NOT_INITIALIZED',
+          message: 'ゲームが選択されていません',
+          recovery: ['room_delete'],
+        });
+      }
 
       // ゲーム設定
       room.gameType = gameType;
       room.gameConfig = config ?? {};
 
-      try {
-        const initialState = initializeGame(room);
+      const initialState = initializeGame(room);
 
-        emitRoomUpdate(roomId);
+      emitRoomUpdate(roomId);
 
-        const engine = getGameDefinition(gameType).engine;
+      const engine = getGameDefinition(gameType).engine;
 
-        emitGameState(room, initialState, 'gameStarted', engine);
-        emitGameState(room, initialState, 'gameStateUpdate', engine);
-      } catch (err) {
-        console.error('startGame failed', err);
-      }
+      emitGameState(room, initialState, 'gameStarted', engine);
+      emitGameState(room, initialState, 'gameStateUpdate', engine);
     });
 
     // 🔁 リマッチ（同じ設定で再プレイ）
     safeOn('rematch', ({ roomId }) => {
       const room = findRoom(roomId);
-      if (!room.gameType) return;
-
-      try {
-        const initialState = initializeGame(room);
-
-        emitRoomUpdate(roomId);
-
-        const engine = getGameDefinition(room.gameType!).engine;
-
-        emitGameState(room, initialState, 'gameStarted', engine);
-        emitGameState(room, initialState, 'gameStateUpdate', engine);
-      } catch (err) {
-        console.error('rematch failed', err);
+      if (!room.gameType) {
+        throw new SystemError({
+          code: 'GAME_NOT_INITIALIZED',
+          message: 'ゲームが選択されていません',
+          recovery: ['room_delete'],
+        });
       }
+
+      const initialState = initializeGame(room);
+
+      emitRoomUpdate(roomId);
+
+      const engine = getGameDefinition(room.gameType!).engine;
+
+      emitGameState(room, initialState, 'gameStarted', engine);
+      emitGameState(room, initialState, 'gameStateUpdate', engine);
     });
 
     // ⚙️ 設定画面に戻る
     safeOn('backToConfig', ({ roomId }) => {
       const room = findRoom(roomId);
 
-      try {
-        room.gameState = null;
-        room.gameConfig = null;
-        room.actionLogs = [];
+      room.gameState = null;
+      room.gameConfig = null;
+      room.actionLogs = [];
 
-        room.status = 'gameWaiting';
+      room.status = 'gameWaiting';
 
-        io.to(roomId).emit('gameStateUpdate', null);
+      io.to(roomId).emit('gameStateUpdate', null);
 
-        emitRoomUpdate(roomId);
-      } catch (err) {
-        console.error('backToConfig failed', err);
-      }
+      emitRoomUpdate(roomId);
     });
 
     // ゲームリセット
     safeOn('resetGame', ({ roomId }) => {
       const room = findRoom(roomId);
 
-      if (!room.gameType) return;
-
-      try {
-        room.gameType = null;
-        room.gameState = null;
-        room.gameConfig = null;
-        room.actionLogs = [];
-        room.status = 'waiting';
-
-        room.players.forEach((p: Player) => {
-          p.isAssetReady = false;
+      if (!room.gameType) {
+        throw new SystemError({
+          code: 'GAME_NOT_INITIALIZED',
+          message: 'ゲームが選択されていません',
+          recovery: ['room_delete'],
         });
-
-        // 🔥 これが超重要
-        io.to(roomId).emit('gameStateUpdate', null);
-
-        emitRoomUpdate(roomId);
-      } catch (err) {
-        console.error('resetGame failed', err);
       }
+
+      room.gameType = null;
+      room.gameState = null;
+      room.gameConfig = null;
+      room.actionLogs = [];
+      room.status = 'waiting';
+
+      room.players.forEach((p: Player) => {
+        p.isAssetReady = false;
+      });
+
+      // 🔥 これが超重要
+      io.to(roomId).emit('gameStateUpdate', null);
+
+      emitRoomUpdate(roomId);
     });
 
     // アセットロードの状態通知
     safeOn('assetLoaded', () => {
-      const playerId = socket.data.playerId;
-      const roomId = socket.data.roomId;
-
-      if (!playerId || !roomId) return;
+      const { roomId, playerId } = checkHasRoomIdAndPlayerID(socket);
 
       const room = findRoom(roomId);
       const player = findPlayer(room, playerId);
@@ -546,20 +557,14 @@ export function createSocketServer(httpServer: any) {
 
     // 一時切断
     safeOn('disconnect', () => {
-      const playerId = socket.data.playerId;
+      const { roomId, playerId } = checkHasRoomIdAndPlayerID(socket);
 
       if (playerId) {
         connectionManager.disconnect(playerId, socket);
       }
 
-      const roomId = socket.data.roomId;
-
-      if (!playerId || !roomId) return;
-
       const room = findRoom(roomId);
-
-      const player = room.players.find((p: any) => p.id === playerId);
-      if (!player) return;
+      const player = findPlayer(room, playerId);
 
       // 現在の接続でなければ無視（古い接続）
       if (!connectionManager.isCurrentSocket(playerId, socket)) {
@@ -571,13 +576,12 @@ export function createSocketServer(httpServer: any) {
       // 🔥 ホスト切断処理（新設計）
       if (room.hostId === playerId) {
         const timeout = setTimeout(() => {
-          const roomNow = roomManager.getRoom(roomId);
-          if (!roomNow) return;
+          const roomNow = findRoom(roomId);
 
-          const playerNow = roomNow.players.find((p: any) => p.id === playerId);
+          const playerNow = findPlayer(roomNow, playerId);
 
           // 復帰済みなら何もしない
-          if (!playerNow || !playerNow.isDisconnected) {
+          if (!playerNow.isDisconnected) {
             return;
           }
 
@@ -591,13 +595,12 @@ export function createSocketServer(httpServer: any) {
 
       // 🔥 通常プレイヤー切断処理
       const timeout = setTimeout(() => {
-        const roomNow = roomManager.getRoom(roomId);
-        if (!roomNow) return;
+        const roomNow = findRoom(roomId);
 
-        const playerNow = roomNow.players.find((p: any) => p.id === playerId);
+        const playerNow = findPlayer(roomNow, playerId);
 
         // 復帰済みなら何もしない
-        if (!playerNow || !playerNow.isDisconnected) {
+        if (!playerNow.isDisconnected) {
           return;
         }
 

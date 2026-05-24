@@ -23,6 +23,7 @@ export const RECOVERY_ACTIONS = [
   'restore_snapshot',
   'player_delete',
   'room_delete',
+  'session_cleanup',
 ] as const;
 
 export type RecoveryAction = (typeof RECOVERY_ACTIONS)[number];
