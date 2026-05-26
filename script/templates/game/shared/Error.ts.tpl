@@ -1,4 +1,4 @@
-import { BaseError } from 'shared/types';
+import { BaseGameError } from 'shared/types';
 import { GameErrorCode } from "./ErrorCode";
 
 /**
@@ -6,8 +6,8 @@ import { GameErrorCode } from "./ErrorCode";
  *
  * ゲームロジックで使用するエラー
  */
-export class GameError extends BaseError<GameErrorCode> {
+export class GameError extends BaseGameError<GameErrorCode> {
   constructor(code: GameErrorCode, message: string) {
-    super('game', code, message);
+    super(code, message);
   }
 }

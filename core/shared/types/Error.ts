@@ -56,3 +56,10 @@ export class SystemError extends BaseError<SystemErrorCode> {
     this.metadata = params.metadata;
   }
 }
+
+// 各ゲームはこれを継承するようにする
+export abstract class BaseGameError<T extends string> extends BaseError<T> {
+  constructor(code: T, message: string) {
+    super('game', code, message);
+  }
+}

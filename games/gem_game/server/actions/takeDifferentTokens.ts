@@ -1,5 +1,5 @@
 // server/src/game/actions/takeDifferentTokens.ts
-import { GemGameState, Color, ActionError } from '../../shared/types';
+import { GemGameState, Color, GameError } from '../../shared/types';
 import getCurrentUser from '../utils/getCurrentUser';
 
 type Params = {
@@ -15,7 +15,7 @@ export function takeDifferentTokens(gameState: GemGameState, params: Params) {
 
   // 3色であること
   if (colors.length !== 3) {
-    throw new ActionError(
+    throw new GameError(
       'INVALID_TOKEN_SELECTION',
       'トークンは3種類選択してください',
     );
@@ -24,7 +24,7 @@ export function takeDifferentTokens(gameState: GemGameState, params: Params) {
   // 重複禁止
   const unique = new Set(colors);
   if (unique.size !== 3) {
-    throw new ActionError(
+    throw new GameError(
       'TOKENS_MUST_BE_DIFFERENT',
       '異なる色のトークンを選択してください',
     );
@@ -33,7 +33,7 @@ export function takeDifferentTokens(gameState: GemGameState, params: Params) {
   // トークンプール確認
   for (const color of colors) {
     if (gameState.tokenPool[color] < 1) {
-      throw new ActionError(
+      throw new GameError(
         'TOKEN_NOT_AVAILABLE',
         'そのトークンは現在取得できません',
       );
@@ -44,7 +44,7 @@ export function takeDifferentTokens(gameState: GemGameState, params: Params) {
   const tokenCount = Object.values(player.tokens).reduce((a, b) => a + b, 0);
 
   if (tokenCount + 3 > 10) {
-    throw new ActionError(
+    throw new GameError(
       'TOKEN_LIMIT_EXCEEDED',
       'トークンは10枚までしか持てません',
     );

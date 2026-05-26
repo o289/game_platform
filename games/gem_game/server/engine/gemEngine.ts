@@ -6,7 +6,7 @@ import {
 } from '../actions/handleActions';
 import { GameEngine } from '@core-server/engine/GameEngine';
 import { Action } from 'shared/types';
-import { ActionError } from 'games/gem_game/shared/types';
+import { GameError } from 'games/gem_game/shared/types';
 import { createGameState } from '../state';
 
 // 仮のState / Config（後で具体化）
@@ -27,7 +27,6 @@ export const gemEngine: GameEngine<GemState, Action, GemConfig> = {
   },
 
   handleAction(state, action) {
-    console.log('🔥 HANDLE ACTION CALLED 🔥', action);
     const newState = structuredClone(state);
 
     switch (action.type) {
@@ -44,7 +43,7 @@ export const gemEngine: GameEngine<GemState, Action, GemConfig> = {
         break;
 
       default:
-        throw new ActionError(
+        throw new GameError(
           'UNKNOWN_ACTION_TYPE',
           'このアクションは存在しません',
         );

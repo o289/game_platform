@@ -1,6 +1,6 @@
 // server/src/game/actions/reserveCard.ts
 
-import { GemGameState, ActionError } from '../../shared/types';
+import { GemGameState, GameError } from '../../shared/types';
 import getCurrentUser from '../utils/getCurrentUser';
 
 function findCardInMarket(gameState: GemGameState, cardId: string) {
@@ -60,10 +60,7 @@ function validateReserveLimit(gameState: GemGameState) {
   if (!player) return;
 
   if (player.reservedCards.length >= 3) {
-    throw new ActionError(
-      'RESERVE_LIMIT_REACHED',
-      '予約カードは最大3枚までです',
-    );
+    throw new GameError('RESERVE_LIMIT_REACHED', '予約カードは最大3枚までです');
   }
 }
 
@@ -92,7 +89,7 @@ export function reserveCard(gameState: GemGameState, params: Params) {
   const result = findCardInMarket(gameState, cardId);
 
   if (!result) {
-    throw new ActionError('CARD_NOT_FOUND', 'カードが見つかりません');
+    throw new GameError('CARD_NOT_FOUND', 'カードが見つかりません');
   }
 
   const { card, level } = result;
@@ -127,13 +124,13 @@ export function reserveFromDeck(gameState: GemGameState, params: DeckParams) {
   const deck = gameState.decks[level];
 
   if (deck.length === 0) {
-    throw new ActionError('DECK_EMPTY', '山札が空です');
+    throw new GameError('DECK_EMPTY', '山札が空です');
   }
 
   const card = deck.shift();
 
   if (!card) {
-    throw new ActionError('DECK_EMPTY', '山札が空です');
+    throw new GameError('DECK_EMPTY', '山札が空です');
   }
 
   // 予約追加

@@ -7,7 +7,7 @@ import {
   TokenColor,
   TokenSet,
 } from '../../shared/types';
-import { ActionError } from '../../shared/types';
+import { GameError } from '../../shared/types';
 import getCurrentUser from '../utils/getCurrentUser';
 
 //
@@ -49,12 +49,12 @@ function validateManualPayment(
 
     // 所持チェック
     if (paid > player.tokens[color]) {
-      throw new ActionError('INVALID_PAYMENT', 'トークンが不足しています');
+      throw new GameError('INVALID_PAYMENT', 'トークンが不足しています');
     }
 
     // 払いすぎチェック
     if (paid > required) {
-      throw new ActionError('INVALID_PAYMENT', '払いすぎです');
+      throw new GameError('INVALID_PAYMENT', '払いすぎです');
     }
 
     const remaining = required - paid;
@@ -66,11 +66,11 @@ function validateManualPayment(
 
   // goldチェック
   if (payment.gold > player.tokens.gold) {
-    throw new ActionError('INVALID_PAYMENT', 'ゴールドが不足しています');
+    throw new GameError('INVALID_PAYMENT', 'ゴールドが不足しています');
   }
 
   if (goldNeeded > payment.gold) {
-    throw new ActionError('INVALID_PAYMENT', '支払いが不足しています');
+    throw new GameError('INVALID_PAYMENT', '支払いが不足しています');
   }
 
   return payment;
@@ -107,7 +107,7 @@ function calculatePayment(player: Player, card: Card) {
   }
 
   if (payment.gold > player.tokens.gold) {
-    throw new ActionError('CANNOT_BUY_CARD', 'コストが足りません');
+    throw new GameError('CANNOT_BUY_CARD', 'コストが足りません');
   }
 
   return payment;
@@ -184,7 +184,7 @@ export function buyCard(gameState: GemGameState, params: Params) {
   const result = findCard(gameState, player, cardId);
 
   if (!result) {
-    throw new ActionError('CARD_NOT_FOUND', 'カードが見つかりません');
+    throw new GameError('CARD_NOT_FOUND', 'カードが見つかりません');
   }
 
   const { card, source, level } = result;
