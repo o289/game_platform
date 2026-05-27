@@ -12,7 +12,6 @@ type GameContextValue = {
   startGame: (config: any) => void;
   resetGame: () => void;
   sendAction: (action: GameAction) => void;
-  error: string | null;
 };
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -38,7 +37,6 @@ export const GameProvider = ({ children }: Props) => {
     startGame,
     resetGame,
     sendAction,
-    error,
   } = useCoreGame<Flip7State, GameAction>();
   const state = gameState as Flip7State | null;
 
@@ -57,7 +55,6 @@ export const GameProvider = ({ children }: Props) => {
         startGame,
         resetGame,
         sendAction,
-        error,
       }}
     >
       {children}

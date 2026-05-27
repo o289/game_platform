@@ -3,15 +3,21 @@ import { GameType } from './Game';
 import { Room } from './Room';
 // エラーコード、処理したいエラーはここに追加するだけにする
 export const SYSTEM_ERROR_CODES = [
-  'ROOM_NOT_FOUND',
-  'PLAYER_NOT_FOUND',
+  // 名前関連
+  'NAME_VALIDATION_ERROR',
   'NAME_NOT_FOUND',
+  // ルーム関連
+  'ROOM_ID_NOT_FOUND',
+  'ROOM_NOT_FOUND',
   'ROOM_FULL',
   'ROOM_ALREADY_EXISTS',
-  'GAME_ALREADY_STARTED',
   'NOT_ENOUGH_PLAYERS',
-  'GAME_NOT_STARTED',
+  // プレイヤー関連
+  'PLAYER_NOT_FOUND',
   'ALREADY_JOINED',
+  // ゲーム関連
+  'GAME_ALREADY_STARTED',
+  'GAME_NOT_STARTED',
   'STATE_MISMATCH',
   'GAME_REPLAY_FAILED',
   'GAME_NOT_INITIALIZED',
@@ -50,7 +56,7 @@ export class SystemError extends BaseError<SystemErrorCode> {
     recovery: RecoveryAction[];
     metadata?: ErrorMetadata;
   }) {
-    super('system', params.code, params.message);
+    super(params.code, params.message);
 
     this.recovery = params.recovery;
     this.metadata = params.metadata;
@@ -60,6 +66,10 @@ export class SystemError extends BaseError<SystemErrorCode> {
 // 各ゲームはこれを継承するようにする
 export abstract class BaseGameError<T extends string> extends BaseError<T> {
   constructor(code: T, message: string) {
-    super('game', code, message);
+    super(code, message);
   }
+}
+export interface UIErrorResponse {
+  title: string;
+  message: string;
 }

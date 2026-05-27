@@ -3,15 +3,14 @@ import WaitingScreen from '@core-client/layouts/WaitingScreen';
 import GameBridge from './components/GameBridge';
 import SystemErrorScreen from '@core-client/layouts/SystemErrorScreen';
 
-import { useRoom } from './hooks/useRoom';
 import { useState } from 'react';
 import { GameType } from 'shared/types';
+import { useRoom } from './hooks/useRoom';
 
 export const App = () => {
   const [name, setName] = useState<string>('');
   const room = useRoom(name);
 
-  const happenError = room.systemError;
   const handleCreateRoom = () => {
     room.onCreateRoom();
   };
@@ -34,10 +33,13 @@ export const App = () => {
         <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
 
         <div className="relative flex flex-col items-center justify-center gap-6 w-full h-full px-4 text-white">
-          {happenError && (
+          {room.error && (
             <SystemErrorScreen
-              message={happenError.message}
-              onClose={() => room.onSystemErrorClose()}
+              title={room.error.title}
+              message={room.error.message}
+              onClose={() => {
+                room.onClearAnnounce();
+              }}
             />
           )}
 

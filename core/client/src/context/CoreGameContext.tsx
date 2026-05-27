@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  ReactNode,
-  useState,
-  useEffect,
-  useMemo,
-} from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useRoomContext } from '@core-client/context/RoomContext';
 import { socketClient } from '@core-client/services/socketClient';
 import { Action } from '../../../../core/shared/types';
@@ -26,8 +19,6 @@ type CoreGameContextType<TState, TAction> = {
   backToConfig: () => void;
   resetGame: () => void;
   sendAction: (action: TAction) => void;
-
-  error: string | null;
 };
 
 const CoreGameContext = createContext<CoreGameContextType<any, any> | null>(
@@ -84,25 +75,6 @@ export const CoreGameProvider = <
     socketClient.resetGame(roomId);
   };
 
-  // エラー
-
-  // ===== エラー =====
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    socketClient.onActionError((err) => {
-      setError(err.message);
-
-      // 自動クローズ
-      setTimeout(() => {
-        setError(null);
-      }, 1500);
-    });
-
-    return () => {
-      socketClient.offActionError();
-    };
-  }, []);
-
   return (
     <CoreGameContext.Provider
       value={{
@@ -118,7 +90,6 @@ export const CoreGameProvider = <
         backToConfig,
         resetGame,
         sendAction,
-        error,
       }}
     >
       {children}

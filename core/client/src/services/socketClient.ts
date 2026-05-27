@@ -9,8 +9,7 @@ const SOCKET_EVENTS = [
   'gameStarted',
   'roomCreated',
   'roomClosed',
-  'action_error',
-  'system_error',
+  'announce_error',
   'gameSelected',
   'leftRoom',
 ] as const;
@@ -62,7 +61,6 @@ class SocketClient {
   disconnect() {
     this.socket.disconnect();
   }
-
   // ------------------------
   // Room
   // ------------------------
@@ -177,15 +175,15 @@ class SocketClient {
   }
 
   // ------------------------
-  // Action Error（専用ヘルパー）
+  // Announce Error（専用ヘルパー）
   // ------------------------
 
-  onActionError(callback: (data: any) => void) {
-    this.on('action_error', callback);
+  onAnnounceError(callback: (data: any) => void) {
+    this.on('announce_error', callback);
   }
 
-  offActionError(callback?: (data: any) => void) {
-    this.off('action_error', callback);
+  offAnnounceError(callback?: (data: any) => void) {
+    this.off('announce_error', callback);
   }
 
   // ------------------------

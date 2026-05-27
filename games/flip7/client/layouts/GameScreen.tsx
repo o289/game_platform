@@ -26,7 +26,7 @@ type Props = {
 };
 
 export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
-  const { error, myPlayer } = useGame();
+  const { myPlayer } = useGame();
 
   const [announcement, setAnnouncement] = useState<string | null>(null);
   const prevRoundRef = useRef<number | null>(null);
@@ -141,17 +141,8 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
         />
       )}
 
-      <Modal isOpen={!!error || !!announcement}>
-        {error && (
-          <div className="flex flex-col items-center gap-4">
-            <div className="text-red-400 text-lg font-bold">
-              無効なアクション
-            </div>
-            <div className="text-center">{error}</div>
-          </div>
-        )}
-
-        {announcement && !error && (
+      <Modal isOpen={!!announcement}>
+        {announcement && (
           <>
             <div className="text-yellow-400 text-lg font-bold">お知らせ</div>
             <div className="text-center">{announcement}</div>

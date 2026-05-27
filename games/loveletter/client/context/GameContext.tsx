@@ -74,8 +74,6 @@ type GameContextValue = {
   canExecute: boolean;
 
   resetAction: () => void;
-
-  error: string | null;
 };
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -101,7 +99,6 @@ export const GameProvider = ({ children }: Props) => {
     sendAction,
     isMyTurn,
     isHost,
-    error,
   } = useCoreGame<PublicLoveletterState, GameAction>();
   const [selectedCard, setSelectedCard] = useState<Card | undefined>();
   const [selectedTargetId, setSelectedTargetId] = useState<
@@ -262,7 +259,6 @@ export const GameProvider = ({ children }: Props) => {
       canPlayCard,
       canExecute,
       resetAction,
-      error,
     }),
     [
       state,
@@ -281,7 +277,6 @@ export const GameProvider = ({ children }: Props) => {
       selectedTargetId,
       guess,
       canExecute,
-      error,
     ],
   );
 

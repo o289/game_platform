@@ -24,7 +24,6 @@ type Props = {
 export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
   const {
     myPlayer,
-    error,
   } = useGame();
   
   // デバッグ用
@@ -62,18 +61,6 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
       >
         サンプルアクション
       </button>
-
-      <Modal isOpen={!!error}>
-        <div className="flex flex-col items-center gap-4">
-          <div className="text-red-400 text-lg font-bold">
-            無効なアクション
-          </div>
-          <div className="text-center">
-            {error}
-          </div>
-        </div>
-      </Modal>
-
     </div>
   );
 }

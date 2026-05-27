@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { GameType, Room, SystemError } from 'shared/types';
+import { GameType, Room, UIErrorResponse, SystemError } from 'shared/types';
 import { socketClient } from '@core-client/services/socketClient';
 import { useRoomContext } from '@core-client/context/RoomContext';
-
+import { ErrorManager } from '@core-server/Error/ErrorManager';
 // シンプルなID生成（後で差し替え可能）
 const generateId = () => Math.random().toString(36).slice(2, 10);
 
 export function useRoom(name: string) {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [systemError, setSystemError] = useState<SystemError | null>(null);
 
   const {
     room,
@@ -18,6 +17,8 @@ export function useRoom(name: string) {
     setMyPlayerId,
     currentRoomId,
     setCurrentRoomId,
+    error,
+    setError,
   } = useRoomContext();
 
   const isCurrentRoom = room?.id != null && currentRoomId === room.id;
@@ -27,80 +28,147 @@ export function useRoom(name: string) {
   const isHost = room?.hostId === playerId;
   const status = room?.status ?? 'init';
 
+  const checkValidateNameLength = () => {
+    if (!name || name.trim().length === 0) {
+      throw new SystemError({
+        code: 'NAME_VALIDATION_ERROR',
+        message: '1文字以上入力してください',
+        recovery: [],
+      });
+    }
+  };
+
+  const safeAction = (handler: () => void) => {
+    try {
+      handler();
+    } catch (err) {
+      const error = ErrorManager.capture(err);
+      setError(error);
+    }
+  };
+
+  useEffect(() => {
+    socketClient.onAnnounceError((err: UIErrorResponse) => {
+      setError(err);
+    });
+
+    return () => {
+      socketClient.offAnnounceError();
+    };
+  }, []);
+
+  const onClearAnnounce = () => {
+    setError(null);
+  };
+
   const onCreateRoom = useCallback(() => {
-    if (!name || name.trim().length === 0) return;
+    safeAction(() => {
+      checkValidateNameLength();
 
-    sessionStorage.setItem('name', name);
+      sessionStorage.setItem('name', name);
 
-    const newPlayerId = generateId();
+      const newPlayerId = generateId();
 
-    setPlayerId(newPlayerId);
-    setMyPlayerId(newPlayerId);
+      setPlayerId(newPlayerId);
+      setMyPlayerId(newPlayerId);
 
-    sessionStorage.setItem('playerId', newPlayerId);
+      sessionStorage.setItem('playerId', newPlayerId);
 
-    socketClient.createRoom(newPlayerId, name);
+      socketClient.createRoom(newPlayerId, name);
+    });
   }, [name]);
 
   const onJoinRoom = useCallback(
     (roomId: string) => {
-      if (!name || name.trim().length === 0) return;
+      safeAction(() => {
+        checkValidateNameLength();
 
-      if (!roomId) return;
+        if (!roomId) {
+          throw new SystemError({
+            code: 'ROOM_ID_NOT_FOUND',
+            message: 'ルームIDが含まれていないため、部屋に参加できません',
+            recovery: [],
+          });
+        }
 
-      const normalizedRoomId = roomId.trim().toUpperCase();
+        const normalizedRoomId = roomId.trim().toUpperCase();
 
-      const newPlayerId = generateId();
+        const newPlayerId = generateId();
 
-      sessionStorage.setItem('name', name);
-      sessionStorage.setItem('roomId', normalizedRoomId);
-      sessionStorage.setItem('playerId', newPlayerId);
+        sessionStorage.setItem('name', name);
+        sessionStorage.setItem('roomId', normalizedRoomId);
+        sessionStorage.setItem('playerId', newPlayerId);
 
-      setRoomId(normalizedRoomId);
-      setPlayerId(newPlayerId);
-      setMyPlayerId(newPlayerId);
+        setRoomId(normalizedRoomId);
+        setPlayerId(newPlayerId);
+        setMyPlayerId(newPlayerId);
 
-      socketClient.joinRoom(normalizedRoomId, newPlayerId, name);
-      setCurrentRoomId(normalizedRoomId);
+        socketClient.joinRoom(normalizedRoomId, newPlayerId, name);
+        setCurrentRoomId(normalizedRoomId);
+      });
     },
     [name],
   );
 
   useEffect(() => {
-    const savedRoomId = sessionStorage.getItem('roomId');
-    const savedPlayerId = sessionStorage.getItem('playerId');
-    const savedName = sessionStorage.getItem('name');
+    safeAction(() => {
+      const savedRoomId = sessionStorage.getItem('roomId');
+      const savedPlayerId = sessionStorage.getItem('playerId');
+      const savedName = sessionStorage.getItem('name');
 
-    if (!savedRoomId || !savedPlayerId || !savedName) return;
+      // エラーを導入すると、部屋新規作成時にエラーが出るため対策を考えてから導入
+      if (!savedRoomId || !savedPlayerId || !savedName) return;
 
-    socketClient.connect({ roomId: savedRoomId, playerId: savedPlayerId });
+      socketClient.connect({ roomId: savedRoomId, playerId: savedPlayerId });
 
-    setRoomId(savedRoomId);
-    setPlayerId(savedPlayerId);
-    setMyPlayerId(savedPlayerId);
-    setCurrentRoomId(savedRoomId);
+      setRoomId(savedRoomId);
+      setPlayerId(savedPlayerId);
+      setMyPlayerId(savedPlayerId);
+      setCurrentRoomId(savedRoomId);
+    });
   }, []);
 
   const onLeaveRoom = () => {
-    if (!roomId || !playerId) return;
-    socketClient.leaveRoom();
+    safeAction(() => {
+      if (!roomId) {
+        throw new SystemError({
+          code: 'ROOM_ID_NOT_FOUND',
+          message: 'ルームIDが含まれていないため、部屋から退出できません',
+          recovery: [],
+        });
+      }
 
-    sessionStorage.removeItem('roomId');
-    sessionStorage.removeItem('playerId');
-    sessionStorage.removeItem('name');
+      if (!playerId) {
+        throw new SystemError({
+          code: 'ROOM_ID_NOT_FOUND',
+          message: 'プレイヤーIDが含まれていないため、部屋から退出できません',
+          recovery: [],
+        });
+      }
 
-    setRoomId(null);
-    setPlayerId(null);
-    setCurrentRoomId(null);
+      socketClient.leaveRoom();
+
+      sessionStorage.removeItem('roomId');
+      sessionStorage.removeItem('playerId');
+      sessionStorage.removeItem('name');
+
+      setRoomId(null);
+      setPlayerId(null);
+      setCurrentRoomId(null);
+    });
   };
 
   const onSelectGame = (gameId: GameType) => {
-    if (!roomId) return;
-    socketClient.selectGame(roomId, gameId);
-  };
-
-  const onSystemErrorClose = () => {
-    setSystemError(null);
+    safeAction(() => {
+      if (!roomId) {
+        throw new SystemError({
+          code: 'ROOM_ID_NOT_FOUND',
+          message: 'ルームIDが含まれていないため、部屋から退出できません',
+          recovery: [],
+        });
+      }
+      socketClient.selectGame(roomId, gameId);
+    });
   };
 
   useEffect(() => {
@@ -171,18 +239,12 @@ export function useRoom(name: string) {
       setGameState(null);
     });
 
-    // --- System error ---
-    socketClient.on('system_error', (error: any) => {
-      setSystemError(error);
-    });
-
     return () => {
       socketClient.off('roomCreated');
       socketClient.off('roomUpdate');
       socketClient.off('gameStarted');
       socketClient.off('gameStateUpdate');
       socketClient.off('gameSelected');
-      socketClient.off('system_error');
       socketClient.off('leftRoom');
     };
   }, []);
@@ -196,12 +258,12 @@ export function useRoom(name: string) {
       isHost: false,
       status: 'init',
       isCurrentRoom: false,
-      systemError,
+      error,
+      onClearAnnounce,
       onCreateRoom,
       onJoinRoom,
       onLeaveRoom,
       onSelectGame,
-      onSystemErrorClose,
     };
   }
   return {
@@ -211,12 +273,12 @@ export function useRoom(name: string) {
     players,
     isHost,
     status,
+    error,
+    onClearAnnounce,
     isCurrentRoom,
-    systemError,
     onCreateRoom,
     onJoinRoom,
     onLeaveRoom,
     onSelectGame,
-    onSystemErrorClose,
   };
 }

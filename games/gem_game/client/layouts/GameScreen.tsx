@@ -32,7 +32,6 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
     cardSource,
     handleCardClick,
     decideCard,
-    error,
   } = useGameContext();
   const decks = state?.decks;
   const levels = [1, 2, 3] as const;
@@ -549,15 +548,6 @@ export default function GameScreen({ state, sendAction, isMyTurn }: Props) {
           <Modal isOpen={showTurnModal}>
             <div className="flex flex-col items-center justify-center gap-2">
               <div className="text-lg text-gray-300">ターン: {state.turn}</div>
-            </div>
-          </Modal>
-
-          <Modal isOpen={!!error}>
-            <div className="flex flex-col items-center gap-4">
-              <div className="text-red-400 text-lg font-bold">
-                無効なアクション
-              </div>
-              <div className="text-center">{error}</div>
             </div>
           </Modal>
 

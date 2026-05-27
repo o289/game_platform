@@ -38,8 +38,6 @@ type GameContextType = {
   cardSource: 'market' | 'reserved' | null;
   handleCardClick: (card: Card, source: 'market' | 'reserved') => void;
   decideCard: () => void;
-
-  error: string | null;
 };
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -57,7 +55,6 @@ export const GemGameProvider = ({ children }: Props) => {
     sendAction,
     isMyTurn,
     isHost,
-    error,
   } = useCoreGame<GemGameState, GemAction>();
 
   const state = gameState as GemGameState | null;
@@ -123,8 +120,6 @@ export const GemGameProvider = ({ children }: Props) => {
         cardSource,
         handleCardClick,
         decideCard,
-
-        error,
       }}
     >
       {children}
